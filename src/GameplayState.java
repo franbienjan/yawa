@@ -15,14 +15,13 @@ public class GameplayState extends BasicGameState {
 	//important GAME variables
 	private int chipsLeft = 30;							//total number of chips
 	private int[] chipTally = {6, 1, 6, 6, 5, 6};		//there are 5 chips per 6 types QUANTITY (tally only)
-	private int[] chipCurrent = {-1, -1, -1, -1, -1};	//chips on hold during selection phase ID
-	private int[] chipBattle = {-1, -1, -1};			//selected chips during battle TYPE
 	private int HP = 150;								//your HP left in this game
     private int chipSelectTimer = 1000;    				//timer for chip screen round
     private int p1_x = 1;								//XGRID position of Player 1
     private int p1_y = 1;								//YGRID position of Player 2
     private Chip[] chipFolder = new Chip[30];			//Your Chip Folder
     private Chip[] chipAvailable = new Chip[5];			//Available Chips on display
+    private Chip[] chipSelected = new Chip[3];			//Selected Chips for Battle (no revert!)
     
 	//other important variables
     int stateID = -1;
@@ -121,9 +120,9 @@ public class GameplayState extends BasicGameState {
     		int chipCoor;
     		
     		if (chipsLeft >= 0) {	
-    			if (chipScrnPtr != 5 && chipCurrent[chipScrnPtr] != -1) {
+    			if (chipScrnPtr != 5 && !chipAvailable[chipScrnPtr].isUsed) {
 	    			//display active chip in screen
-	    			switch (chipFolder[chipCurrent[chipScrnPtr]].getChipType()) {
+	    			switch (chipAvailable[chipScrnPtr].getChipType()) {
 		    			case 0: 
 		    				getFromSpriteSheet = sprites_chipscreen.getSprite(0, 0);
 		    				break;
@@ -153,8 +152,8 @@ public class GameplayState extends BasicGameState {
 	    		//load available chips one by one
 	    		for (int i = 0; i < 5; i++) {
 	    			
-	    			if (chipCurrent[i] != -1) {
-		    			switch (chipFolder[chipCurrent[i]].getChipType()) {
+	    			if (!chipAvailable[i].isUsed) {
+		    			switch (chipAvailable[i].getChipType()) {
 		    				case 0: 
 		    					getFromSpriteSheet = sprites_chips.getSprite(0, 0);
 		    					break;
@@ -176,7 +175,7 @@ public class GameplayState extends BasicGameState {
 		    			}
 	    			
 	    				getFromSpriteSheet.draw(chipCoor, 270);
-	    				g.drawString("" + chipFolder[chipCurrent[i]].getChipLetter(), chipCoor+15, 305);
+	    				g.drawString("" + chipAvailable[i].getChipLetter(), chipCoor+15, 305);
 	    			}
 	    			
 	    			chipCoor += 40;
@@ -195,30 +194,31 @@ public class GameplayState extends BasicGameState {
 	    		
 	    		for (int i = 0; i < 3; i++) {
 	    			
-	    			switch(chipBattle[i]) {
-	    				case 0:
-	    					getFromSpriteSheet = sprites_chips.getSprite(0, 0);
-	    					break;
-	    				case 1:
-	    					getFromSpriteSheet = sprites_chips.getSprite(0, 1);
-	    					break;
-	    				case 2:
-	    					getFromSpriteSheet = sprites_chips.getSprite(1, 0);
-	    					break;
-	    				case 3:
-	    					getFromSpriteSheet = sprites_chips.getSprite(1, 1);
-	    					break;
-	    				case 4:
-	    					getFromSpriteSheet = sprites_chips.getSprite(2, 0);
-	    					break;
-	    				case 5:
-	    					getFromSpriteSheet = sprites_chips.getSprite(2, 1);
-	    					break;
+	    			if (chipSelected[i].isUsed) {
+		    			switch(chipSelected[i].getChipType()) {
+		    				case 0:
+		    					getFromSpriteSheet = sprites_chips.getSprite(0, 0);
+		    					break;
+		    				case 1:
+		    					getFromSpriteSheet = sprites_chips.getSprite(0, 1);
+		    					break;
+		    				case 2:
+		    					getFromSpriteSheet = sprites_chips.getSprite(1, 0);
+		    					break;
+		    				case 3:
+		    					getFromSpriteSheet = sprites_chips.getSprite(1, 1);
+		    					break;
+		    				case 4:
+		    					getFromSpriteSheet = sprites_chips.getSprite(2, 0);
+		    					break;
+		    				case 5:
+		    					getFromSpriteSheet = sprites_chips.getSprite(2, 1);
+		    					break;
+		    			}
+		    			
+		    			getFromSpriteSheet.draw(247, chipCoor);
+		    			chipCoor += 40;
 	    			}
-	    			
-	    			if (chipBattle[i] != -1)
-	    				getFromSpriteSheet.draw(247, chipCoor);
-	    			chipCoor += 40;
 	    		
 	    		}
     		}
@@ -371,18 +371,16 @@ public class GameplayState extends BasicGameState {
     	//select chip!
     	if (input.isKeyPressed(Input.KEY_ENTER)) {
     		
-    		if (chipScrnPtr == 5) {    					//exit selection screen
+    		if (chipScrnPtr == 5) {    								//exit selection screen
     			chipSelectView = false;
     			currentState = STATES.UPDATE_LOCATIONS_STATE;
-    		} else {									//choose chip
+    		} else if (!chipAvailable[chipScrnPtr].isUsed) {		//choose chip
 	    		for (int i = 0; i < 3; i++) {
-	    			if (chipBattle[i] == -1) {
-	    				chipBattle[i] = chipFolder[chipCurrent[chipScrnPtr]].getChipType();
-	    				//chipBattle[i] = chipAvailable[chipScrnPtr].getChipType();
-	    				//chipFolder[chipAvailable[i].getChipId()].isUsed = true;
-	    				chipFolder[chipCurrent[chipScrnPtr]].isUsed = true;
-	    				chipCurrent[chipScrnPtr] = -1;
-	    				chipAvailable[i].isUsed = true;
+	    			if (!chipSelected[i].isUsed) {
+	    				chipSelected[i] = chipAvailable[chipScrnPtr];
+	    				chipFolder[chipSelected[i].getChipId()].isUsed = true;
+	    				chipAvailable[chipScrnPtr].isUsed = true;
+	    				chipSelected[i].isUsed = true;
 	    				break;
 	    			}
 	    		}
@@ -401,7 +399,6 @@ public class GameplayState extends BasicGameState {
     	do {
     		if (chipFolder[i].isUsed == false) {
     			chipAvailable[loc] = chipFolder[i];					//copy from chipFolder list
-    			chipCurrent[loc] = chipFolder[i].getChipId();
     			loc++;
     		}
     		i++;
@@ -409,18 +406,17 @@ public class GameplayState extends BasicGameState {
     	
     	if (loc < 5) {
     		System.out.println("Less than five yung chips OMGEH");
-    		for (; loc < 5; loc++) {
-    			chipAvailable[loc].isUsed = true;					//para iignore yung chip
-    		}
+    		//for (; loc < 5; loc++) {
+    		//	chipAvailable[loc].isUsed = true;					//para later on ma-ignore yung chip		
+    		//}
     	}
     	
     }
     
     public void chipBattleReset () {
     	//reset the registers everytime we begin a new chipSelect phase
-    	chipBattle[0] = -1;
-    	chipBattle[1] = -1;
-    	chipBattle[2] = -1;
+    	for (int i = 0; i < 3; i++)
+    		chipSelected[i] = new Chip (-1, -1, -1, 0);
     }
   
 }
