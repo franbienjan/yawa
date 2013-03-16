@@ -1,5 +1,7 @@
-import java.net.Socket;
 import java.util.Random;
+import java.util.Scanner;
+import java.io.*;
+import java.net.*;
 
 import org.newdawn.slick.Animation;
 import org.newdawn.slick.GameContainer;
@@ -10,8 +12,30 @@ import org.newdawn.slick.SlickException;
 import org.newdawn.slick.SpriteSheet;
 import org.newdawn.slick.state.BasicGameState;
 import org.newdawn.slick.state.StateBasedGame;
-
-public class GameplayState extends BasicGameState {
+  
+public class MyClient extends BasicGameState {
+	
+	private static class sndthread extends Thread {
+		
+		Socket socket;
+		MyConnection conn;
+		
+		public sndthread (Socket socket) {
+			this.socket = socket;
+		}
+		
+		public void run() {
+			
+			conn = new MyConnection(socket);
+			
+			while (true) {
+				Scanner scan = new Scanner(System.in);
+				String sndmsg = scan.nextLine();
+				conn.sendMessage(sndmsg);
+			}
+		}
+		
+	}
 	
 	private static class rcvthread extends Thread {
 		
@@ -31,6 +55,10 @@ public class GameplayState extends BasicGameState {
 				
 				mesg = conn.getMessage();
 				System.out.println("Itanim: " + mesg);
+				if (mesg.equals("Right"))
+					System.out.println("Kanan!");
+				else if (mesg.equals("Left"))
+					System.out.println("Kaliwa!");
 					
 				if (mesg.startsWith("!!!TAG:")) {
 					System.out.println("Hahahaahahahha! " + mesg);
@@ -40,14 +68,9 @@ public class GameplayState extends BasicGameState {
 		
 	}
 	
-	//*****************************************************************************************
-	//*****************************************************************************************
-	//*****************************************************************************************
-	
-	//threads for client
-	//private sndthread snd;
+	//threads
+	private sndthread snd;
 	private rcvthread rcv;
-	private MyConnection conn;
 	
 	//important GAME variables
 	private int chipsLeft = 30;							//total number of chips
@@ -56,8 +79,6 @@ public class GameplayState extends BasicGameState {
     private int chipSelectTimer = 1000;    				//timer for chip screen round
     private int p1_x = 1;								//XGRID position of Player 1
     private int p1_y = 1;								//YGRID position of Player 2
-    private int p2_x = 1;
-    private int p2_y = 1;
     private Chip[] chipFolder = new Chip[30];			//Your Chip Folder
     private Chip[] chipAvailable = new Chip[5];			//Available Chips on display
     private Chip[] chipSelected = new Chip[3];			//Selected Chips for Battle (no revert!)
@@ -66,10 +87,8 @@ public class GameplayState extends BasicGameState {
     int stateID = -1;
     int	chipScrnPtr = 0;								//pointer display at chipSelector
     private boolean chipSelectView = false;				//chipSelector view: true or false
-    private float p1_locX = 170;						//original X location of Player 1
-    private float p1_locY = 400;						//original Y location of Player 1
-    private float p2_locX = 570;						//original X location of Player 2
-    private float p2_locY = 400;						//original Y location of Player 2
+    private float locX = 170;
+    private float locY = 400;
     
     //game states
     private enum STATES {
@@ -82,7 +101,6 @@ public class GameplayState extends BasicGameState {
     private Image background = null;					//background image of area
     private Image field = null;							//arena (red and blue)
     private Image megaman = null;						//player1 navi
-    private Image numberman = null;						//player2 navi
     private Image custbar = null;						//custom gauge bar on top
     private Image chipSelectScrn = null;				//chipSelector
     	private Image chipSelectScrn_ok = null;			//subImage of OK screen
@@ -99,7 +117,7 @@ public class GameplayState extends BasicGameState {
     
     //*********************************************************************************************
   
-    GameplayState( int stateID ) {
+    MyClient ( int stateID ) {
        this.stateID = stateID;
     }
   
@@ -110,29 +128,30 @@ public class GameplayState extends BasicGameState {
     
     public void enter(GameContainer gc, StateBasedGame sb) throws SlickException {
     	super.enter(gc, sb);
-    	currentState = STATES.START_GAME_STATE;
-
+    	//clean board
     	Socket socket;
 		try {
 			socket = new Socket("127.0.0.1", 8888);
-			//snd = new sndthread(socket);
+			snd = new sndthread(socket);
 			rcv = new rcvthread(socket);
-			//snd.start();
-			conn = new MyConnection(socket);
+			snd.start();
 			rcv.start();
 			System.out.println("Is it starting?");
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		
+    	currentState = STATES.START_GAME_STATE;
+    	//hp start-ups
+    	//chip start-ups
     }
-  
+    
     public void init(GameContainer gc, StateBasedGame sb) throws SlickException {
     	
     	//basic images
     	background = new Image("images/back.png");
     	field = new Image("images/field.png");
     	megaman = new Image("images/megasprite.png");
-    	numberman = new Image("images/numsprite.png");
     	custbar = new Image("images/custombar.png");  
     	
     	//sprite sheets
@@ -162,8 +181,7 @@ public class GameplayState extends BasicGameState {
     	custbar.draw();
     	
     	//navis
-    	megaman.draw(p1_locX, p1_locY);
-    	numberman.draw(p2_locX, p2_locY);
+    	megaman.draw(locX, locY);
     	
     	//attacks
     	
@@ -359,67 +377,38 @@ public class GameplayState extends BasicGameState {
     	//wait for input from opposite player
     	//update other stuff like bullets and bombs and shit
     	
-    	//INPUT FOR PLAYER ----------------------------
     	Input input = gc.getInput();
+    	
+    	if (rcv.mesg != null) {
+    		System.out.println("Hello hello baby " + rcv.mesg);
    	 
-	   	if (input.isKeyPressed(Input.KEY_A)) {
-	   		if (p1_x != 0) {
-	   			conn.sendMessage("Left");
-	   			p1_x--;
-	   			p1_locX -= 130;
-	   		}
-	   	} else if (input.isKeyPressed(Input.KEY_D)) {
-	   		if (p1_x != 2) {
-	   			conn.sendMessage("Right");
-	   			p1_x++;
-	   			p1_locX += 130;
-	   		}
-	   	}
+		   	//if (input.isKeyPressed(Input.KEY_A)) {
+	    	if (rcv.mesg.equals("Left")) {
+		   		if (p1_x != 0) {
+		   			p1_x--;
+		   			locX -= 130;
+		   		}
+		   	//} else if (input.isKeyPressed(Input.KEY_D)) {
+	    	} else if (rcv.mesg.equals("Right")) {
+		   		if (p1_x != 2) {
+		   			p1_x++;
+		   			locX += 130;
+		   		}
+		   	}
+    	}
 	   	 
 	   	if (input.isKeyPressed(Input.KEY_W)) {
 	   		if (p1_y != 0) {
-	   			conn.sendMessage("Up");
 	   			p1_y--;
-	   			p1_locY -= 80;
+	   			locY -= 80;
 	   		}
 	   	} else if (input.isKeyPressed(Input.KEY_S)) {
 	   		if (p1_y != 2) {
-	   			conn.sendMessage("Down");
 	   			p1_y++;
-	   			p1_locY += 80;
+	   			locY += 80;
 	   		}
 	   	}
-	   	//----------------------------------------------------------
 	   	
-	   	//INPUT FROM ANOTHER PLAYER --------------------------------
-	   	String rcvmsg = rcv.mesg;
-	   	
-	   	if (rcvmsg != null) {
-		   	if (rcvmsg.equals("Left")) {
-		   		if (p2_x != 0) {
-		   			p2_x--;
-		   			p2_locX -= 130;
-		   		}
-		   	} else if (rcvmsg.equals("Right")) {
-		   		if (p2_x != 2) {
-		   			p2_x++;
-		   			p2_locX += 130;
-		   		}
-		   	}
-		   	 
-		   	if (rcvmsg.equals("Up")) {
-		   		if (p2_y != 0) {
-		   			p2_y--;
-		   			p2_locY -= 80;
-		   		}
-		   	} else if (rcvmsg.equals("Down")) {
-		   		if (p2_y != 2) {
-		   			p2_y++;
-		   			p2_locY += 80;
-		   		}
-		   	}
-	   	}
-	   	//----------------------------------------------------------
     }
     
     public void chipSelectProcess (GameContainer gc, int delta) {
