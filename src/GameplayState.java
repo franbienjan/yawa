@@ -429,11 +429,6 @@ Pag last chip na, dapat yung ChipSelector screen nakatanga lang
 	- may error array out of bounds dito
 	- may error ata in this case: CUBE SWORD SWORD, kinuha ko yung 1st sword pero bumalik din sa second run
 
-Dapat talaga gawa tayo ng chipAvailable na Chip array. Magagawa natin yung
-restriction of selection ng mas madali
-
-Implement chip array current
-
 Implement undo-er for chips selected in battle register during chipSelectorScrn
 Implement dim chips that are not compatible with selected
 Put HP bar under megaman
