@@ -21,11 +21,7 @@ public class MyServer {
 			conn = new MyConnection (socket);
 			
 			//Preliminary stuff here (to set-up client class)
-<<<<<<< HEAD
 			Players[tag].conn.sendMessage("TAG: " + tag);
-=======
-			//Players[tag].conn.sendMessage("!!!TAG: " + tag);
->>>>>>> 4b9330a2b30f4c851101079f51f0a96d1f79e074
 			
 			while (true) {
 				
@@ -51,10 +47,6 @@ public class MyServer {
 		}
 		
 		try {
-<<<<<<< HEAD
-=======
-		
->>>>>>> 4b9330a2b30f4c851101079f51f0a96d1f79e074
 			System.out.println("Waiting for player 1!");
 			socket = ssocket.accept();
 			Player[0] = new chatthread(socket, 0, Player);
