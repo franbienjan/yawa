@@ -20,6 +20,7 @@ public class BattleNetworkGame extends StateBasedGame {
 	}
 	
 	public void initStatesList(GameContainer gameContainer) throws SlickException {
+														//state for splash screen
 		this.addState(new GameplayState(GAMEPLAYSTATE));
 	}
 

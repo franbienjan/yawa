@@ -1,5 +1,7 @@
-import java.net.Socket;
 import java.util.Random;
+import java.util.Scanner;
+import java.io.*;
+import java.net.*;
 
 import org.newdawn.slick.Animation;
 import org.newdawn.slick.GameContainer;
@@ -10,75 +12,84 @@ import org.newdawn.slick.SlickException;
 import org.newdawn.slick.SpriteSheet;
 import org.newdawn.slick.state.BasicGameState;
 import org.newdawn.slick.state.StateBasedGame;
-
-public class GameplayState extends BasicGameState {
+  
+public class MyClient extends BasicGameState {
 	
-	private static class rcvthread extends Thread {
-	
+	private static class sndthread extends Thread {
+		
+		Socket socket;
 		MyConnection conn;
-		String msg;
-		int id;
-		boolean ready;				//waiting for game to begin 
-		Navi[] navi;
 		
-		public rcvthread (Socket socket, Navi[] navi) {
-			this.conn = new MyConnection(socket);
-			this.navi = navi;
-			this.ready = false;
-		}
-		
-		public String getMsg() {
-			return msg;
+		public sndthread (Socket socket) {
+			this.socket = socket;
 		}
 		
 		public void run() {
 			
+			conn = new MyConnection(socket);
+			
 			while (true) {
-				
-				msg = conn.getMessage();
-				
-				if (msg.startsWith("TAG: ")) {
-					id = msg.charAt(5) - 48;
-				} else if (msg.startsWith("MOVE ")) {
-					int temp = msg.charAt(5) - 48;
-					String dir = msg.substring(7);
-
-					switch(dir) {
-						case "LEFT":
-							navi[temp].setX(navi[temp].getX() - 1);
-							navi[temp].setPosX(navi[temp].getPosX() - 130);
-							break;
-						case "RIGHT":
-							navi[temp].setX(navi[temp].getX() + 1);
-							navi[temp].setPosX(navi[temp].getPosX() + 130);
-							break;
-						case "UP":
-							navi[temp].setY(navi[temp].getY() - 1);
-							navi[temp].setPosY(navi[temp].getPosY() - 80);
-							break;
-						case "DOWN":
-							navi[temp].setY(navi[temp].getY() + 1);
-							navi[temp].setPosY(navi[temp].getPosY() + 80);
-							break;
-					}
-						
-				}
-				
-				System.out.println(">> " + msg + " || " + id);
+				Scanner scan = new Scanner(System.in);
+				String sndmsg = scan.nextLine();
+				conn.sendMessage(sndmsg);
 			}
 		}
 		
 	}
 	
-	//*****************************************************************************************
-	//*****************************************************************************************
-	//*****************************************************************************************
+	private static class rcvthread extends Thread {
+		
+		Socket socket;
+		MyConnection conn;
+		public String mesg;
+		
+		public rcvthread (Socket socket) {
+			this.socket = socket;
+		}
+		
+		public void run() {
+			
+			conn = new MyConnection(socket);
+			
+			while (true) {
+				
+				mesg = conn.getMessage();
+				System.out.println("Itanim: " + mesg);
+				if (mesg.equals("Right"))
+					System.out.println("Kanan!");
+				else if (mesg.equals("Left"))
+					System.out.println("Kaliwa!");
+					
+				if (mesg.startsWith("!!!TAG:")) {
+					System.out.println("Hahahaahahahha! " + mesg);
+				}
+			}
+		}
+		
+	}
 	
-	//threads for client
+	//threads
+	private sndthread snd;
 	private rcvthread rcv;
-	private MyConnection conn;
-	int stateID = -1;
 	
+	//important GAME variables
+	private int chipsLeft = 30;							//total number of chips
+	private int[] chipTally = {6, 1, 6, 6, 5, 6};		//there are 5 chips per 6 types QUANTITY (tally only)
+	private int HP = 150;								//your HP left in this game
+    private int chipSelectTimer = 1000;    				//timer for chip screen round
+    private int p1_x = 1;								//XGRID position of Player 1
+    private int p1_y = 1;								//YGRID position of Player 2
+    private Chip[] chipFolder = new Chip[30];			//Your Chip Folder
+    private Chip[] chipAvailable = new Chip[5];			//Available Chips on display
+    private Chip[] chipSelected = new Chip[3];			//Selected Chips for Battle (no revert!)
+    
+	//other important variables
+    int stateID = -1;
+    int	chipScrnPtr = 0;								//pointer display at chipSelector
+    private boolean chipSelectView = false;				//chipSelector view: true or false
+    private float locX = 170;
+    private float locY = 400;
+    
     //game states
     private enum STATES {
         START_GAME_STATE, UPDATE_LOCATIONS_STATE, CHIP_SELECTION_STATE
@@ -86,28 +97,10 @@ public class GameplayState extends BasicGameState {
     
     private STATES currentState = null;
     
-	//navi array
-	Navi[] navi = new Navi[2];
-	
-	//important GAME variables
-	private int playID = -1;							//your player number (either 1 or 2)
-	
-	private int chipsLeft = 30;							//total number of chips
-	private int[] chipTally = {6, 1, 6, 6, 5, 6};		//there are 5 chips per 6 types QUANTITY (tally only)
-    private int chipSelectTimer = 1000;    				//timer for chip screen round
-    private Chip[] chipFolder = new Chip[30];			//Your Chip Folder
-    private Chip[] chipAvailable = new Chip[5];			//Available Chips on display
-    private Chip[] chipSelected = new Chip[3];			//Selected Chips for Battle (no revert!)
-    
-	//other important variables
-    int	chipScrnPtr = 0;								//pointer display at chipSelector
-    private boolean chipSelectView = false;				//chipSelector view: true or false
-    
     //images used
     private Image background = null;					//background image of area
     private Image field = null;							//arena (red and blue)
     private Image megaman = null;						//player1 navi
-    private Image numberman = null;						//player2 navi
     private Image custbar = null;						//custom gauge bar on top
     private Image chipSelectScrn = null;				//chipSelector
     	private Image chipSelectScrn_ok = null;			//subImage of OK screen
@@ -124,7 +117,7 @@ public class GameplayState extends BasicGameState {
     
     //*********************************************************************************************
   
-    GameplayState( int stateID ) {
+    MyClient ( int stateID ) {
        this.stateID = stateID;
     }
   
@@ -135,28 +128,30 @@ public class GameplayState extends BasicGameState {
     
     public void enter(GameContainer gc, StateBasedGame sb) throws SlickException {
     	super.enter(gc, sb);
-    	currentState = STATES.START_GAME_STATE;
-
+    	//clean board
     	Socket socket;
 		try {
 			socket = new Socket("127.0.0.1", 8888);
-			rcv = new rcvthread(socket, navi);
-			conn = new MyConnection(socket);				//for this thread
+			snd = new sndthread(socket);
+			rcv = new rcvthread(socket);
+			snd.start();
 			rcv.start();
+			System.out.println("Is it starting?");
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-
 		
+    	currentState = STATES.START_GAME_STATE;
+    	//hp start-ups
+    	//chip start-ups
     }
-  
+    
     public void init(GameContainer gc, StateBasedGame sb) throws SlickException {
     	
     	//basic images
     	background = new Image("images/back.png");
     	field = new Image("images/field.png");
     	megaman = new Image("images/megasprite.png");
-    	numberman = new Image("images/numsprite.png");
     	custbar = new Image("images/custombar.png");  
     	
     	//sprite sheets
@@ -177,9 +172,6 @@ public class GameplayState extends BasicGameState {
     	chipSelectScrn = new Image("images/chipSelectScrn.png");
     		chipSelectScrn_ok = chipSelectScrn.getSubImage(227,294,52,44);
     		chipSelectScrn_add = chipSelectScrn.getSubImage(0,0,0,0);
-    		
-    	navi[0] = new Navi(0);
-    	navi[1] = new Navi(1);
     }
   
     public void render(GameContainer gc, StateBasedGame sb, Graphics g) throws SlickException {
@@ -189,8 +181,7 @@ public class GameplayState extends BasicGameState {
     	custbar.draw();
     	
     	//navis
-    	megaman.draw(navi[0].posX, navi[0].posY);
-    	numberman.draw(navi[1].posX, navi[1].posY);
+    	megaman.draw(locX, locY);
     	
     	//attacks
     	
@@ -304,10 +295,6 @@ public class GameplayState extends BasicGameState {
 	    		}
     		}
     	}
-    	
-    	g.drawString("" + chipSelectTimer, 400,400);
-    	g.drawString("Player 1 Coordinates: " + navi[0].getX() + ", " + navi[0].getY(), 400, 450);
-    	g.drawString("Player 2 Coordinates: " + navi[1].getX() + ", " + navi[1].getY(), 400, 500);
     }
   
     public void update(GameContainer gc, StateBasedGame sb, int delta) throws SlickException {
@@ -320,7 +307,7 @@ public class GameplayState extends BasicGameState {
 	    	//start game
     		case START_GAME_STATE:
     			currentState = STATES.UPDATE_LOCATIONS_STATE;
-    			chipMaker();									//to make the 30 chip objects
+    			//chipMaker();									//to make the 30 chip objects
     			break;
     			
    	    	//update locations    			
@@ -390,33 +377,37 @@ public class GameplayState extends BasicGameState {
     	//wait for input from opposite player
     	//update other stuff like bullets and bombs and shit
     	
-    	//INPUT FROM PLAYER ----------------------------
     	Input input = gc.getInput();
-    	String direction = "";
-   	 	playID = rcv.id;
-   	 	
-	   	if (input.isKeyPressed(Input.KEY_A)) {
-	   		if (navi[playID].getX() > 0) {
-	   			direction = "LEFT";
-	   		}
-	   	} else if (input.isKeyPressed(Input.KEY_D)) {
-	   		if (navi[playID].getX() < 2) {
-	   			direction = "RIGHT";
-	   			
-	   		}
-	   	} else if (input.isKeyPressed(Input.KEY_W)) {
-	   		if (navi[playID].getY() > 0) {
-	   			direction = "UP";
+    	
+    	if (rcv.mesg != null) {
+    		System.out.println("Hello hello baby " + rcv.mesg);
+   	 
+		   	//if (input.isKeyPressed(Input.KEY_A)) {
+	    	if (rcv.mesg.equals("Left")) {
+		   		if (p1_x != 0) {
+		   			p1_x--;
+		   			locX -= 130;
+		   		}
+		   	//} else if (input.isKeyPressed(Input.KEY_D)) {
+	    	} else if (rcv.mesg.equals("Right")) {
+		   		if (p1_x != 2) {
+		   			p1_x++;
+		   			locX += 130;
+		   		}
+		   	}
+    	}
+	   	 
+	   	if (input.isKeyPressed(Input.KEY_W)) {
+	   		if (p1_y != 0) {
+	   			p1_y--;
+	   			locY -= 80;
 	   		}
 	   	} else if (input.isKeyPressed(Input.KEY_S)) {
-	   		if (navi[playID].getY() < 2) {
-	   			direction = "DOWN";
+	   		if (p1_y != 2) {
+	   			p1_y++;
+	   			locY += 80;
 	   		}
 	   	}
-	   	
-	   	//send message
-	   	if (direction != "")
-	   		conn.sendMessage("MOVE " + playID + " " + direction);
 	   	
     }
     
