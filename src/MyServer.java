@@ -10,14 +10,15 @@ class chatthread extends Thread {
 	MyConnection conn = null;					//connection communicator
 	int tag = -1;								//1 or 2, player tag
 	chatthread[] Players = null;
-	boolean ready;
+	boolean ready, wait;
 	
 	public chatthread (Socket socket, int tag, chatthread[] Players) {
 		this.socket = socket;
 		this.tag = tag;
 		this.Players = Players;
 		this.conn = new MyConnection (socket);
-		ready = false;
+		this.ready = false;
+		this.wait = false;
 	}
 	
 	public void run() {
@@ -25,13 +26,13 @@ class chatthread extends Thread {
 		String msg;
 		
 		//Give players their tag number
-		Players[tag].conn.sendMessage("TAG: " + tag);
+		Players[tag].conn.sendMessage("TAG " + tag);
 		
 		//Players wait for START Signal
 		do {
 			msg = conn.getMessage();
-			if (msg.startsWith("READY: ")) {
-				int id = msg.charAt(7) - 48;
+			if (msg.startsWith("READY ")) {
+				int id = msg.charAt(6) - 48;
 				if (id == tag) {
 					ready = true;
 				}
@@ -45,9 +46,22 @@ class chatthread extends Thread {
 		while (true) {
 			
 			msg = conn.getMessage();
-			//System.out.println("Message: " + msg);
-			Players[0].conn.sendMessage(msg);
-			Players[1].conn.sendMessage(msg);
+			
+			if (msg.startsWith("READYCHIP")) {
+				int id = msg.charAt(10) - 48;
+				if (id == tag)
+					wait = true;
+				
+				if (wait && Players[1-tag].wait) {
+					Players[0].conn.sendMessage("CHIPSCREEN 1");
+					Players[1].conn.sendMessage("CHIPSCREEN 1");
+					wait = false;
+					Players[1-tag].wait = false;
+				}
+			} else {
+				Players[0].conn.sendMessage(msg);
+				Players[1].conn.sendMessage(msg);
+			}
 		}
 	}
 }
@@ -96,7 +110,7 @@ public class MyServer {
 					updateAll();
 				}
 			};
-			timer.schedule(ttask, 10000, 10000);
+			timer.schedule(ttask, 50000, 50000);
 			
 			Player[0].start();
 			Player[1].start();

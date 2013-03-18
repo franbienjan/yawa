@@ -18,15 +18,16 @@ public class GameplayState extends BasicGameState {
 		MyConnection conn;
 		String msg;
 		int id;
-		boolean ready, start;				//waiting for game to begin 
+		boolean ready, start, wait;				//waiting for game to begin 
 		Navi[] navi;
-		boolean isChipScrn;					//if its time to display the chip screen
+		boolean isChipScrn;						//if its time to display the chip screen
 		
 		public rcvthread (Socket socket, Navi[] navi) {
 			this.conn = new MyConnection(socket);
 			this.navi = navi;
 			this.ready = false;
 			this.start = false;
+			this.wait = false;
 			this.isChipScrn = false;
 		}
 		
@@ -36,28 +37,29 @@ public class GameplayState extends BasicGameState {
 			
 			msg = conn.getMessage();
 			
-			if (msg.startsWith("TAG: ")) {
-				id = msg.charAt(5) - 48;
+			if (msg.startsWith("TAG ")) {
+				id = msg.charAt(4) - 48;
 			}
 			
-			conn.sendMessage("READY: " + id);
+			conn.sendMessage("READY " + id);
 			
 			while (true) {
 				
 				msg = conn.getMessage();
 				System.out.println("Msg: " + msg);
-				/* COMMAND LIST:
-				 * (1) START
-				 * (2) MOVE: <player_ID> <direction>
-				 * (3) CHIPSCREEN <mode>
-				 * 
-				 */
+				
+				// ====== COMMAND LIST ======
+				// (1) START
+				// (2) MOVE <player_ID> <direction>
+				// (3) CHIPSCREEN <mode>
+				// 
+				//
 				
 				if (msg.startsWith("START")) {
 					this.start = true;
-				} else if (msg.startsWith("MOVE: ")) {
-					int temp = msg.charAt(6) - 48;
-					String dir = msg.substring(8);
+				} else if (msg.startsWith("MOVE ")) {
+					int temp = msg.charAt(5) - 48;
+					String dir = msg.substring(7);
 
 					switch(dir) {
 						case "LEFT":
@@ -79,11 +81,13 @@ public class GameplayState extends BasicGameState {
 					}
 				} else if (msg.startsWith("CHIPSCREEN")) {
 					int mode = msg.charAt(11) - 48;
-					//System.out.println("Chipscreen tiemz " + id);
-					if (mode == 0)
+					if (mode == 0) {
 						this.isChipScrn = true;
-					else if (mode == 1)
+						this.wait = true;
+					} else if (mode == 1) {
 						this.isChipScrn = false;
+						this.wait = false;
+					}
 				}
 			}
 		}
@@ -121,6 +125,7 @@ public class GameplayState extends BasicGameState {
 	//other important variables
     int	chipScrnPtr = 0;								//pointer display at chipSelector
     private boolean chipSelectView = false;				//chipSelector view: true or false
+    boolean waitScreen = false;							//waiting screen
     
     //images used
     private Image background = null;					//background image of area
@@ -131,6 +136,7 @@ public class GameplayState extends BasicGameState {
     private Image chipSelectScrn = null;				//chipSelector
     	private Image chipSelectScrn_ok = null;			//subImage of OK screen
     	private Image chipSelectScrn_add = null;		//subImage of ADD screen
+    private Image waitingScrn = null;					//waiting screen after chips
     
     //spritesheets
     private SpriteSheet sprites_chips = null;			//sprites of small chips
@@ -177,6 +183,7 @@ public class GameplayState extends BasicGameState {
     	megaman = new Image("images/megasprite.png");
     	numberman = new Image("images/numsprite.png");
     	custbar = new Image("images/custombar.png");  
+    	waitingScrn = new Image("images/waitingscrn.png");
     	
     	//sprite sheets
     	sprites_chips = new SpriteSheet("images/sprites_chips.png", 34, 34);
@@ -324,6 +331,11 @@ public class GameplayState extends BasicGameState {
     		}
     	}
     	
+    	//waiting stage
+    	if (waitScreen || !rcv.start) {
+    		waitingScrn.draw();
+    	}
+    	
     }
   
     public void update(GameContainer gc, StateBasedGame sb, int delta) throws SlickException {
@@ -338,8 +350,8 @@ public class GameplayState extends BasicGameState {
 	    	
 		    	//start game
 	    		case START_GAME_STATE:
-	    			currentState = STATES.UPDATE_LOCATIONS_STATE;
 	    			chipMaker();									//to make the 30 chip objects
+	    			currentState = STATES.UPDATE_LOCATIONS_STATE;
 	    			break;
 	    			
 	   	    	//update locations    			
@@ -353,8 +365,18 @@ public class GameplayState extends BasicGameState {
 	    				chipSelectLoader();							//load 5 chips from folder
 	    				chipBattleReset();							//empty the battle registers
 	    			}
-	    			chipSelectView = true;
-	    			chipSelectProcess(gc, delta);					//select chips from loaded registers
+	    			
+	    			if (!waitScreen) {
+	    				chipSelectView = true;
+	    				chipSelectProcess(gc, delta);				//select chips from loaded registers
+	    			} 
+	    			
+	    			if (!rcv.wait && waitScreen) {
+	    	    		currentState = STATES.UPDATE_LOCATIONS_STATE;
+	    	    		System.out.println("UPDATE AGAD " + playID);
+	    	    		waitScreen = false;
+	    	    	}
+	    			
 	    			break;
 	    			
 		    	//check collisions
@@ -420,7 +442,6 @@ public class GameplayState extends BasicGameState {
 	   	} else if (input.isKeyPressed(Input.KEY_D)) {
 	   		if (navi[playID].getX() < 2) {
 	   			direction = "RIGHT";
-	   			
 	   		}
 	   	} else if (input.isKeyPressed(Input.KEY_W)) {
 	   		if (navi[playID].getY() > 0) {
@@ -434,7 +455,7 @@ public class GameplayState extends BasicGameState {
 	   	
 	   	//send message
 	   	if (direction != "")
-	   		conn.sendMessage("MOVE: " + playID + " " + direction);
+	   		conn.sendMessage("MOVE " + playID + " " + direction);
 	   	
     }
     
@@ -443,10 +464,12 @@ public class GameplayState extends BasicGameState {
     	//wait for input for chip selections
     	//input can be via mouse or keyboard :D (KEYBOARD MUNA TAYO PLEASE)
     	//add for chips
+    	
+    	//NOTE: Hindi aalis sa process na ito hanggang sa mag-exit (or click OK)
     	Input input = gc.getInput();
     	
     	//MOUSE ACTIONS START
-    	int mouseX = input.getMouseX();
+    	/*int mouseX = input.getMouseX();
     	int mouseY = input.getMouseY();
     	boolean insideOk = false;
     	
@@ -460,10 +483,9 @@ public class GameplayState extends BasicGameState {
     			chipSelectView = false;
     			currentState = STATES.UPDATE_LOCATIONS_STATE;
     		}
-    	}
+    	} */
     	
     	//KEYBOARD START
-    	
     	//move chipScrnPtr
     	if (input.isKeyPressed(Input.KEY_A)) {
     		if (chipScrnPtr != 0)
@@ -478,9 +500,10 @@ public class GameplayState extends BasicGameState {
     		
     		if (chipScrnPtr == 5) {    								//exit selection screen
     			chipSelectView = false;
+    			waitScreen = true;
     			System.out.println("Dito ba galing?");
-    			conn.sendMessage("CHIPSCREEN 1");
-    			currentState = STATES.UPDATE_LOCATIONS_STATE;
+    			conn.sendMessage("READYCHIP " + rcv.id);
+    			
     		} else if (!chipAvailable[chipScrnPtr].isUsed) {		//choose chip
 	    		for (int i = 0; i < 3; i++) {
 	    			if (!chipSelected[i].isUsed) {
@@ -534,9 +557,8 @@ public class GameplayState extends BasicGameState {
 ***************************************************************
 TIMER TASK
 --> palitan natin yung loop function into a thread function
+--> at saka dapat magpause din whenever chip selection screen
  
-Dapat magkasabay sila sa pag join the game (one will have to wait the other?)
-
 Pag last chip na, dapat yung ChipSelector screen nakatanga lang
 	- may error array out of bounds dito
 	- may error ata in this case: CUBE SWORD SWORD, kinuha ko yung 1st sword pero bumalik din sa second run
