@@ -110,7 +110,7 @@ public class MyServer {
 					updateAll();
 				}
 			};
-			timer.schedule(ttask, 50000, 50000);
+			timer.schedule(ttask, 30000, 30000);
 			
 			Player[0].start();
 			Player[1].start();

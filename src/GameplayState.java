@@ -218,6 +218,40 @@ public class GameplayState extends BasicGameState {
     	megaman.draw(navi[0].posX, navi[0].posY);
     	numberman.draw(navi[1].posX, navi[1].posY);
     	
+    	//hp levels
+    	g.drawString("" + navi[0].hp, navi[0].posX, navi[0].posY + 50);
+    	g.drawString("" + navi[1].hp, navi[1].posX, navi[1].posY + 50);
+    	
+    	//draw and display chips in register
+    	for (int i = 0, space = 0; i < 3; i++, space += 10) {
+    		if (chipSelected[i] != null) {
+    			if (chipSelected[i].isUsed) {
+    				switch(chipSelected[i].getChipType()) {
+    				case 0:
+    					getFromSpriteSheet = sprites_chips.getSprite(0, 0);
+    					break;
+    				case 1:
+    					getFromSpriteSheet = sprites_chips.getSprite(0, 1);
+    					break;
+    				case 2:
+    					getFromSpriteSheet = sprites_chips.getSprite(1, 0);
+    					break;
+    				case 3:
+    					getFromSpriteSheet = sprites_chips.getSprite(1, 1);
+    					break;
+    				case 4:
+    					getFromSpriteSheet = sprites_chips.getSprite(2, 0);
+    					break;
+    				case 5:
+    					getFromSpriteSheet = sprites_chips.getSprite(2, 1);
+    					break;
+    			}
+    			
+    			getFromSpriteSheet.draw(navi[playID].posX + space, navi[playID].posY - 40);
+    			}
+    		}
+    	}
+    	
     	//attacks
     	
     	//during chip selection state
@@ -342,7 +376,9 @@ public class GameplayState extends BasicGameState {
     	
     	if (rcv.ready && rcv.start) { 
     		
-	    	if (rcv.isChipScrn) {
+	    	if (rcv.isChipScrn && !chipSelectView && !waitScreen) {
+	    		chipBattleReset();									//empty the battle registers
+	    		chipSelectLoader();									//load 5 chips from folder
 	    		currentState = STATES.CHIP_SELECTION_STATE;
 	    	}
 	    	
@@ -360,12 +396,7 @@ public class GameplayState extends BasicGameState {
 	    			break;
 	    		
 	    		//selection of chips for timeout
-	    		case CHIP_SELECTION_STATE:
-	    			if (chipSelectView == false) {					//to make sure once lang to gagawin
-	    				chipSelectLoader();							//load 5 chips from folder
-	    				chipBattleReset();							//empty the battle registers
-	    			}
-	    			
+	    		case CHIP_SELECTION_STATE:	    			
 	    			if (!waitScreen) {
 	    				chipSelectView = true;
 	    				chipSelectProcess(gc, delta);				//select chips from loaded registers
@@ -373,7 +404,6 @@ public class GameplayState extends BasicGameState {
 	    			
 	    			if (!rcv.wait && waitScreen) {
 	    	    		currentState = STATES.UPDATE_LOCATIONS_STATE;
-	    	    		System.out.println("UPDATE AGAD " + playID);
 	    	    		waitScreen = false;
 	    	    	}
 	    			
@@ -419,7 +449,7 @@ public class GameplayState extends BasicGameState {
     			//System.out.println("Results: " + id + " " + randType + " " + randLetter);
     			chipFolder[id] = new Chip(id, randType, randLetter, hpdamage[randType]);
     		} else {									//ubos na allocation for chip type
-    			id--;			
+    			id--;
     		}
     	}
     	
@@ -451,11 +481,14 @@ public class GameplayState extends BasicGameState {
 	   		if (navi[playID].getY() < 2) {
 	   			direction = "DOWN";
 	   		}
+	   	} else if (input.isKeyPressed(Input.KEY_SPACE)){
+	   		//do something == launch chip
 	   	}
 	   	
 	   	//send message
 	   	if (direction != "")
 	   		conn.sendMessage("MOVE " + playID + " " + direction);
+	   	
 	   	
     }
     
@@ -501,7 +534,6 @@ public class GameplayState extends BasicGameState {
     		if (chipScrnPtr == 5) {    								//exit selection screen
     			chipSelectView = false;
     			waitScreen = true;
-    			System.out.println("Dito ba galing?");
     			conn.sendMessage("READYCHIP " + rcv.id);
     			
     		} else if (!chipAvailable[chipScrnPtr].isUsed) {		//choose chip
@@ -558,6 +590,10 @@ public class GameplayState extends BasicGameState {
 TIMER TASK
 --> palitan natin yung loop function into a thread function
 --> at saka dapat magpause din whenever chip selection screen
+
+OPTIMIZATION
+--> yung sprite sheet, one dimension lang. Para pagcall, pwedeng:
+	getFromSprite(something, x, chipType()); nalang or something :D
  
 Pag last chip na, dapat yung ChipSelector screen nakatanga lang
 	- may error array out of bounds dito
