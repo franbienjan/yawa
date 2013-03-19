@@ -226,28 +226,8 @@ public class GameplayState extends BasicGameState {
     	for (int i = 0, space = 0; i < 3; i++, space += 10) {
     		if (chipSelected[i] != null) {
     			if (chipSelected[i].isUsed) {
-    				switch(chipSelected[i].getChipType()) {
-    				case 0:
-    					getFromSpriteSheet = sprites_chips.getSprite(0, 0);
-    					break;
-    				case 1:
-    					getFromSpriteSheet = sprites_chips.getSprite(0, 1);
-    					break;
-    				case 2:
-    					getFromSpriteSheet = sprites_chips.getSprite(1, 0);
-    					break;
-    				case 3:
-    					getFromSpriteSheet = sprites_chips.getSprite(1, 1);
-    					break;
-    				case 4:
-    					getFromSpriteSheet = sprites_chips.getSprite(2, 0);
-    					break;
-    				case 5:
-    					getFromSpriteSheet = sprites_chips.getSprite(2, 1);
-    					break;
-    			}
-    			
-    			getFromSpriteSheet.draw(navi[playID].posX + space, navi[playID].posY - 40);
+    				getFromSpriteSheet = sprites_chips.getSprite(0, chipSelected[i].getChipType());
+    	  			getFromSpriteSheet.draw(navi[playID].posX + space, navi[playID].posY - 40);
     			}
     		}
     	}
@@ -258,68 +238,24 @@ public class GameplayState extends BasicGameState {
     	if (chipSelectView) { 		
     		chipSelectScrn.draw();
     		
-    		int chipCoor;
-    		
     		if (chipsLeft >= 0) {	
+    			
+				//display active chip in screen
     			if (chipScrnPtr != 5 && !chipAvailable[chipScrnPtr].isUsed) {
-	    			//display active chip in screen
-	    			switch (chipAvailable[chipScrnPtr].getChipType()) {
-		    			case 0: 
-		    				getFromSpriteSheet = sprites_chipscreen.getSprite(0, 0);
-		    				break;
-		    			case 1:
-			    			getFromSpriteSheet = sprites_chipscreen.getSprite(0, 1);
-			    			break;
-		    			case 2:
-			    			getFromSpriteSheet = sprites_chipscreen.getSprite(1, 0);
-			    			break;
-		    			case 3:
-			    			getFromSpriteSheet = sprites_chipscreen.getSprite(1, 1);
-			    			break;
-		    			case 4:
-			    			getFromSpriteSheet = sprites_chipscreen.getSprite(2, 0);
-			    			break;
-		    			case 5:
-			    			getFromSpriteSheet = sprites_chipscreen.getSprite(2, 1);
-			    			break;   				
-	    			}
+    				getFromSpriteSheet = sprites_chipscreen.getSprite(0, chipAvailable[chipScrnPtr].getChipType());
     			} else {
-    				getFromSpriteSheet = sprites_chipscreen.getSprite(3, 0);
+    				getFromSpriteSheet = sprites_chipscreen.getSprite(0, 6);
     			}
     			
     			getFromSpriteSheet.draw(21, 23);
-    			chipCoor = 25;
     			
 	    		//load available chips one by one
-	    		for (int i = 0; i < 5; i++) {
-	    			
+	    		for (int i = 0, chipCoor = 25; i < 5; i++, chipCoor += 40) {
 	    			if (!chipAvailable[i].isUsed) {
-		    			switch (chipAvailable[i].getChipType()) {
-		    				case 0: 
-		    					getFromSpriteSheet = sprites_chips.getSprite(0, 0);
-		    					break;
-		    				case 1:
-			    				getFromSpriteSheet = sprites_chips.getSprite(0, 1);
-			    				break;
-		    				case 2:
-			    				getFromSpriteSheet = sprites_chips.getSprite(1, 0);
-			    				break;
-		    				case 3:
-			    				getFromSpriteSheet = sprites_chips.getSprite(1, 1);
-			    				break;
-		    				case 4:
-			    				getFromSpriteSheet = sprites_chips.getSprite(2, 0);
-			    				break;
-		    				case 5:
-			    				getFromSpriteSheet = sprites_chips.getSprite(2, 1);
-			    				break;
-		    			}
-	    			
+	    				getFromSpriteSheet = sprites_chips.getSprite(0, chipAvailable[i].getChipType());
 	    				getFromSpriteSheet.draw(chipCoor, 270);
 	    				g.drawString("" + chipAvailable[i].getChipLetter(), chipCoor+15, 305);
 	    			}
-	    			
-	    			chipCoor += 40;
 	    		}
 	    		
 	    		//display active cursor    	
@@ -330,37 +266,12 @@ public class GameplayState extends BasicGameState {
 	    		
 	    		animChipCursor.start();
 	    		
-	    		//load selected chips one by one
-	    		chipCoor = 65;
-	    		
-	    		for (int i = 0; i < 3; i++) {
-	    			
+	    		//load selected chips one by one	    		
+	    		for (int i = 0, chipCoor = 65; i < 3; i++, chipCoor += 40) {
 	    			if (chipSelected[i].isUsed) {
-		    			switch(chipSelected[i].getChipType()) {
-		    				case 0:
-		    					getFromSpriteSheet = sprites_chips.getSprite(0, 0);
-		    					break;
-		    				case 1:
-		    					getFromSpriteSheet = sprites_chips.getSprite(0, 1);
-		    					break;
-		    				case 2:
-		    					getFromSpriteSheet = sprites_chips.getSprite(1, 0);
-		    					break;
-		    				case 3:
-		    					getFromSpriteSheet = sprites_chips.getSprite(1, 1);
-		    					break;
-		    				case 4:
-		    					getFromSpriteSheet = sprites_chips.getSprite(2, 0);
-		    					break;
-		    				case 5:
-		    					getFromSpriteSheet = sprites_chips.getSprite(2, 1);
-		    					break;
-		    			}
-		    			
+	    				getFromSpriteSheet = sprites_chips.getSprite(0, chipSelected[i].getChipType());
 		    			getFromSpriteSheet.draw(247, chipCoor);
-		    			chipCoor += 40;
 	    			}
-	    		
 	    		}
     		}
     	}
@@ -590,10 +501,6 @@ public class GameplayState extends BasicGameState {
 TIMER TASK
 --> palitan natin yung loop function into a thread function
 --> at saka dapat magpause din whenever chip selection screen
-
-OPTIMIZATION
---> yung sprite sheet, one dimension lang. Para pagcall, pwedeng:
-	getFromSprite(something, x, chipType()); nalang or something :D
  
 Pag last chip na, dapat yung ChipSelector screen nakatanga lang
 	- may error array out of bounds dito
