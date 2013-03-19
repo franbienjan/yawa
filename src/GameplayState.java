@@ -128,7 +128,7 @@ public class GameplayState extends BasicGameState {
 	
     //game states
     private enum STATES {
-        START_GAME_STATE, UPDATE_LOCATIONS_STATE, CHIP_SELECTION_STATE
+        START_GAME_STATE, UPDATE_LOCATIONS_STATE, CHIP_SELECTION_STATE, END_GAME_STATE
     }
     
     private STATES currentState = null;
@@ -148,7 +148,8 @@ public class GameplayState extends BasicGameState {
 	//other important variables
     int	chipScrnPtr = 0;								//pointer display at chipSelector
     private boolean chipSelectView = false;				//chipSelector view: true or false
-    boolean waitScreen = false;							//waiting screen
+    boolean waitScreen = false;							//is waiting screen?
+    boolean endScreen = false;							//is endscreen?
     
     //images used
     private Image background = null;					//background image of area
@@ -160,6 +161,7 @@ public class GameplayState extends BasicGameState {
     	private Image chipSelectScrn_ok = null;			//subImage of OK screen
     	private Image chipSelectScrn_add = null;		//subImage of ADD screen
     private Image waitingScrn = null;					//waiting screen after chips
+    private Image endingScrn = null;					//ending screen game over
     
     //spritesheets
     private SpriteSheet sprites_chips = null;			//sprites of small chips
@@ -207,6 +209,7 @@ public class GameplayState extends BasicGameState {
     	numberman = new Image("images/numsprite.png");
     	custbar = new Image("images/custombar.png");  
     	waitingScrn = new Image("images/waitingscrn.png");
+    	endingScrn = new Image("images/gameover.png");
     	
     	//sprite sheets
     	sprites_chips = new SpriteSheet("images/sprites_chips.png", 34, 34);
@@ -304,6 +307,10 @@ public class GameplayState extends BasicGameState {
     		waitingScrn.draw();
     	}
     	
+    	//ending screen
+    	if (endScreen) {
+    		endingScrn.draw();
+    	}
     }
   
     public void update(GameContainer gc, StateBasedGame sb, int delta) throws SlickException {
@@ -311,10 +318,14 @@ public class GameplayState extends BasicGameState {
     	if (rcv.ready && rcv.start) { 
     		
     		//first entrance to chipSelection process
-	    	if (rcv.isChipScrn && !chipSelectView && !waitScreen) {
+	    	if (rcv.isChipScrn && !chipSelectView && !waitScreen && !endScreen) {
 	    		chipBattleReset();									//empty the battle registers
 	    		chipSelectLoader();									//load 5 chips from folder
 	    		currentState = STATES.CHIP_SELECTION_STATE;
+	    	}
+	    	
+	    	if (navi[0].hp <= 0 || navi[1].hp <= 0) {
+	    		currentState = STATES.END_GAME_STATE;
 	    	}
 	    	
 	    	switch (currentState) {
@@ -344,9 +355,11 @@ public class GameplayState extends BasicGameState {
 	    			
 	    			break;
 	    			
-		    	//check collisions
-		    	//do something collisions
-		    	//final update on locations
+		    	//end game
+	    		case END_GAME_STATE:
+	    			endScreen = true;
+	    			
+	    		
 	    	}
 	    	
     	}
