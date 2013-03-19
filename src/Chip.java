@@ -5,8 +5,9 @@ public class Chip {
 	private int chipType = -1;			//type of chip (out of the six)
 	private int chipLetter = -1;		//letter of chip (0, 1, or 2 OR A, B, and C)
 	private int hpDamage = 0;			//negative kung damage, positive kung life, 0 pag wala
-	public boolean isUsed = false;		//para malaman kung nagamit na yung chip or hindi pa
-
+	public boolean isEmpty = false;		//para malaman kung nagamit na yung chip or hindi pa
+	public boolean isUsed = false;		//during battle phase (kung nagamit na or hindi pa)
+	
 	public Chip (int id) {
 		this.chipId = id;
 	}

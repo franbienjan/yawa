@@ -1,5 +1,6 @@
 import java.net.Socket;
 import java.util.Random;
+import java.lang.Math;
 
 import org.newdawn.slick.Animation;
 import org.newdawn.slick.GameContainer;
@@ -52,8 +53,9 @@ public class GameplayState extends BasicGameState {
 				// (1) START
 				// (2) MOVE <player_ID> <direction>
 				// (3) CHIPSCREEN <mode>
-				// 
-				//
+				// (4) FIRE <player_ID_caster> <damage>
+				// (5) CHIP <player_ID_caster> <chip_type> <negative/positive>
+				// (6) 
 				
 				if (msg.startsWith("START")) {
 					this.start = true;
@@ -88,6 +90,27 @@ public class GameplayState extends BasicGameState {
 						this.isChipScrn = false;
 						this.wait = false;
 					}
+				} else if (msg.startsWith("FIRE ")) {
+					int temp = msg.charAt(5) - 48;
+					int damage = msg.charAt(7) - 48;
+					
+					if (damage == 1) {
+						navi[1-temp].setHP(navi[1-temp].hp - 1);
+					}
+					
+				} else if (msg.startsWith("CHIP ")) {
+					System.out.println("CHIP message: " + msg);
+					int temp = msg.charAt(5) - 48;
+					int damtype = msg.charAt(7) - 48;
+					int damage = Integer.parseInt(msg.substring(9));
+					
+					if (damtype == 1) {
+						damage *= -1;
+					} else if (damtype == 0) {
+						damtype = 1;
+					}
+					
+					navi[temp].setHP(navi[temp].getHP() + (damage * damtype));
 				}
 			}
 		}
@@ -223,9 +246,9 @@ public class GameplayState extends BasicGameState {
     	g.drawString("" + navi[1].hp, navi[1].posX, navi[1].posY + 50);
     	
     	//draw and display chips in register
-    	for (int i = 0, space = 0; i < 3; i++, space += 10) {
+    	for (int i = 2, space = 0; i >= 0; i--, space += 10) {
     		if (chipSelected[i] != null) {
-    			if (chipSelected[i].isUsed) {
+    			if (chipSelected[i].isEmpty && !chipSelected[i].isUsed) {
     				getFromSpriteSheet = sprites_chips.getSprite(0, chipSelected[i].getChipType());
     	  			getFromSpriteSheet.draw(navi[playID].posX + space, navi[playID].posY - 40);
     			}
@@ -241,7 +264,7 @@ public class GameplayState extends BasicGameState {
     		if (chipsLeft >= 0) {	
     			
 				//display active chip in screen
-    			if (chipScrnPtr != 5 && !chipAvailable[chipScrnPtr].isUsed) {
+    			if (chipScrnPtr != 5 && !chipAvailable[chipScrnPtr].isEmpty) {
     				getFromSpriteSheet = sprites_chipscreen.getSprite(0, chipAvailable[chipScrnPtr].getChipType());
     			} else {
     				getFromSpriteSheet = sprites_chipscreen.getSprite(0, 6);
@@ -251,7 +274,7 @@ public class GameplayState extends BasicGameState {
     			
 	    		//load available chips one by one
 	    		for (int i = 0, chipCoor = 25; i < 5; i++, chipCoor += 40) {
-	    			if (!chipAvailable[i].isUsed) {
+	    			if (!chipAvailable[i].isEmpty) {
 	    				getFromSpriteSheet = sprites_chips.getSprite(0, chipAvailable[i].getChipType());
 	    				getFromSpriteSheet.draw(chipCoor, 270);
 	    				g.drawString("" + chipAvailable[i].getChipLetter(), chipCoor+15, 305);
@@ -268,7 +291,7 @@ public class GameplayState extends BasicGameState {
 	    		
 	    		//load selected chips one by one	    		
 	    		for (int i = 0, chipCoor = 65; i < 3; i++, chipCoor += 40) {
-	    			if (chipSelected[i].isUsed) {
+	    			if (chipSelected[i].isEmpty) {
 	    				getFromSpriteSheet = sprites_chips.getSprite(0, chipSelected[i].getChipType());
 		    			getFromSpriteSheet.draw(247, chipCoor);
 	    			}
@@ -287,6 +310,7 @@ public class GameplayState extends BasicGameState {
     	
     	if (rcv.ready && rcv.start) { 
     		
+    		//first entrance to chipSelection process
 	    	if (rcv.isChipScrn && !chipSelectView && !waitScreen) {
 	    		chipBattleReset();									//empty the battle registers
 	    		chipSelectLoader();									//load 5 chips from folder
@@ -392,11 +416,57 @@ public class GameplayState extends BasicGameState {
 	   		if (navi[playID].getY() < 2) {
 	   			direction = "DOWN";
 	   		}
+	   	} else if (input.isKeyPressed(Input.KEY_G)) {
+	   		//fire bullet
+	   		if (navi[playID].y == navi[1-playID].y) {
+	   			conn.sendMessage("FIRE " + playID + " " + 1); 
+	   		}
 	   	} else if (input.isKeyPressed(Input.KEY_SPACE)){
-	   		//do something == launch chip
+	   		//launch chip (examine chip type, then send corresponding action)
+	   		for (int i = 0; i < 3; i++) {
+	   			if (chipSelected[i] != null) {
+	   				if (!chipSelected[i].isUsed) {
+
+	   					String msg = "";
+	   					
+	   					//do switch here
+	   					switch (chipSelected[i].getChipType()) {	
+	   						case 0:	//Bomb
+	   							if (navi[playID].x == navi[1-playID].x) {
+	   								msg = "CHIP " + (1-playID) + " 1 " + (chipSelected[i].getHpDamage()) * -1;
+	   							}
+	   							break;
+	   						case 1: //Recov80
+	   							msg = "CHIP " + playID + " 0 " + chipSelected[i].getHpDamage();
+	   							break;
+	   						case 2: //RockCube
+	   							msg = "CHIP " + (1-playID) + " 0 " + 0;
+	   							break;
+	   						case 3: //WideSwrd
+	   							if (Math.abs(navi[playID].x - navi[1-playID].x) == 2) {
+	   								msg = "CHIP " + (1-playID) + " 1 " + (chipSelected[i].getHpDamage()) * -1;
+	   							}
+	   							break;
+	   						case 4: //Recov30
+	   							msg = "CHIP " + playID + " 0 " + chipSelected[i].getHpDamage();
+	   							break;
+	   						case 5: //Cannon
+	   							if (navi[playID].y == navi[1-playID].y)
+	   								msg = "CHIP " + (1-playID) + " 1 " + (chipSelected[i].getHpDamage()) * -1;
+	   							break;
+	   					}
+	   					
+	   					chipSelected[i].isUsed = true;
+	   					if (msg != "")
+	   						conn.sendMessage(msg);
+	   					break;
+	   				}
+	   			}
+	   		}
+	   		
 	   	}
 	   	
-	   	//send message
+	   	//send message for movements
 	   	if (direction != "")
 	   		conn.sendMessage("MOVE " + playID + " " + direction);
 	   	
@@ -447,13 +517,13 @@ public class GameplayState extends BasicGameState {
     			waitScreen = true;
     			conn.sendMessage("READYCHIP " + rcv.id);
     			
-    		} else if (!chipAvailable[chipScrnPtr].isUsed) {		//choose chip
+    		} else if (!chipAvailable[chipScrnPtr].isEmpty) {		//choose chip
 	    		for (int i = 0; i < 3; i++) {
-	    			if (!chipSelected[i].isUsed) {
+	    			if (!chipSelected[i].isEmpty) {
 	    				chipSelected[i] = chipAvailable[chipScrnPtr];
-	    				chipFolder[chipSelected[i].getChipId()].isUsed = true;
-	    				chipAvailable[chipScrnPtr].isUsed = true;
-	    				chipSelected[i].isUsed = true;
+	    				chipFolder[chipSelected[i].getChipId()].isEmpty = true;
+	    				chipAvailable[chipScrnPtr].isEmpty = true;
+	    				chipSelected[i].isEmpty = true;
 	    				break;
 	    			}
 	    		}
@@ -470,7 +540,7 @@ public class GameplayState extends BasicGameState {
     	int loc = 0;
     	
     	do {
-    		if (chipFolder[i].isUsed == false) {
+    		if (chipFolder[i].isEmpty == false) {
     			chipAvailable[loc] = chipFolder[i];					//copy from chipFolder list
     			loc++;
     		}
@@ -480,7 +550,7 @@ public class GameplayState extends BasicGameState {
     	if (loc < 5) {
     		System.out.println("Less than five yung chips OMGEH");
     		//for (; loc < 5; loc++) {
-    		//	chipAvailable[loc].isUsed = true;					//para later on ma-ignore yung chip		
+    		//	chipAvailable[loc].isEmpty = true;					//para later on ma-ignore yung chip		
     		//}
     	}
     	
@@ -502,6 +572,9 @@ TIMER TASK
 --> palitan natin yung loop function into a thread function
 --> at saka dapat magpause din whenever chip selection screen
  
+CHIP SELECTION ERROR
+--> pag 3 chips ang pinili ng both players, error D:
+
 Pag last chip na, dapat yung ChipSelector screen nakatanga lang
 	- may error array out of bounds dito
 	- may error ata in this case: CUBE SWORD SWORD, kinuha ko yung 1st sword pero bumalik din sa second run
