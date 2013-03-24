@@ -21,6 +21,11 @@ class chatthread extends Thread {
 		this.wait = false;
 	}
 	
+	public void sendMsg(String msg) {
+		Players[0].conn.sendMessage(msg);
+		Players[1].conn.sendMessage(msg);
+	}
+	
 	public void run() {
 		
 		String msg;
@@ -40,8 +45,7 @@ class chatthread extends Thread {
 		} while (!ready || !Players[1-tag].ready);
 		
 		System.out.println("Let the games begin! ");
-		Players[0].conn.sendMessage("START");
-		Players[1].conn.sendMessage("START");
+		this.sendMsg("START");
 		
 		while (true) {
 			
@@ -53,14 +57,12 @@ class chatthread extends Thread {
 					wait = true;
 				
 				if (wait && Players[1-tag].wait) {
-					Players[0].conn.sendMessage("CHIPSCREEN 1");
-					Players[1].conn.sendMessage("CHIPSCREEN 1");
+					this.sendMsg("CHIPSCREEN 1");
 					wait = false;
 					Players[1-tag].wait = false;
 				}
 			} else {
-				Players[0].conn.sendMessage(msg);
-				Players[1].conn.sendMessage(msg);
+				this.sendMsg(msg);
 			}
 		}
 	}

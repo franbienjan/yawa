@@ -4,7 +4,7 @@ public class Navi {
 
 	int tag;									//0 or 1 (player type)
 	int x, y;									//grid coordinate of Navi
-	float posX, posY;							//pixel coordinates of Navi
+	int adjust = 0;								//for player 2 Navi adjustment
 	int hp;										//hp of navi
 	
 	//with regards to chips
@@ -20,15 +20,11 @@ public class Navi {
 		y = 1;
 		hp = 150;
 		chipsleft = 30;
-		
 		this.tag = tag;							//indicate player type
 		
-		if (tag == 0)							//Player 1 starting x-coordinate
-			posX = 170;
-		else if (tag == 1)
-			posX = 570;							//Player 2 starting x-coordinate
-		
-		posY = 400;								//Both players starting y-coordinate
+		if (tag == 1)							//Player 2 adjustment
+			adjust = 400;
+			
 	}
 	
 	public void setHP (int hp) {
@@ -40,11 +36,11 @@ public class Navi {
 	}
 	
 	public float getPosX() {
-		return posX;
+		return 40 + (this.x * 130) + adjust;
 	}
 	
 	public float getPosY() {
-		return posY;
+		return 320 + (this.y * 80);
 	}
 	
 	public int getX() {
@@ -63,6 +59,7 @@ public class Navi {
 		this.y = (int) y;
 	}
 	
+	/*
 	public void setPosX (float posX) {
 		this.posX = posX;
 	}
@@ -70,5 +67,6 @@ public class Navi {
 	public void setPosY (float posY) {
 		this.posY = posY;
 	}
+	*/
 	
 }

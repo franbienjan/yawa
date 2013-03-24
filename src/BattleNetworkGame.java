@@ -9,6 +9,8 @@ public class BattleNetworkGame extends StateBasedGame {
 	public static final int GAMEPLAYSTATE = 1;
 	public static final int INTROSTATE = 2;
 	
+	String port, ip;
+	
 	public BattleNetworkGame() {
 		super("Battle Network");
 	}
@@ -17,13 +19,14 @@ public class BattleNetworkGame extends StateBasedGame {
 		// TODO Auto-generated method stub
 		AppGameContainer app = new AppGameContainer(new BattleNetworkGame());
 		app.setDisplayMode(800, 600, false);
-		app.setMinimumLogicUpdateInterval(100);
+		//app.setMinimumLogicUpdateInterval(100);
+		//app.setMaximumLogicUpdateInterval(100);
 		app.start();
 	}
 	
 	public void initStatesList(GameContainer gameContainer) throws SlickException {
 	
-		//this.addState(new IntroState(INTROSTATE));
+		this.addState(new IntroState(INTROSTATE));
 		this.addState(new GameplayState(GAMEPLAYSTATE));
 	}
 

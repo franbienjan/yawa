@@ -66,19 +66,15 @@ public class GameplayState extends BasicGameState {
 					switch(dir) {
 						case "LEFT":
 							navi[temp].setX(navi[temp].getX() - 1);
-							navi[temp].setPosX(navi[temp].getPosX() - 130);
 							break;
 						case "RIGHT":
 							navi[temp].setX(navi[temp].getX() + 1);
-							navi[temp].setPosX(navi[temp].getPosX() + 130);
 							break;
 						case "UP":
 							navi[temp].setY(navi[temp].getY() - 1);
-							navi[temp].setPosY(navi[temp].getPosY() - 80);
 							break;
 						case "DOWN":
 							navi[temp].setY(navi[temp].getY() + 1);
-							navi[temp].setPosY(navi[temp].getPosY() + 80);
 							break;
 					}
 				} else if (msg.startsWith("CHIPSCREEN")) {
@@ -167,6 +163,7 @@ public class GameplayState extends BasicGameState {
     private SpriteSheet sprites_chips = null;			//sprites of small chips
     private SpriteSheet sprites_chipscreen = null;		//sprites of big chips
     private SpriteSheet sprites_chipCursor = null;		//sprites for blinking cursor
+    private SpriteSheet sprites_digits = null;			//sprites for blinking cursor
     private Image getFromSpriteSheet = null;			//temporary holder of images from sprites
     
     //animations
@@ -188,7 +185,8 @@ public class GameplayState extends BasicGameState {
 
     	Socket socket;
 		try {
-			socket = new Socket("127.0.0.1", 8888);
+			BattleNetworkGame bng = (BattleNetworkGame) sb;
+			socket = new Socket(bng.ip, Integer.parseInt(bng.port));
 			rcv = new rcvthread(socket, navi);
 			conn = new MyConnection(socket);				//for this thread
 			rcv.start();
@@ -207,7 +205,7 @@ public class GameplayState extends BasicGameState {
     	field = new Image("images/field.png");
     	megaman = new Image("images/megasprite.png");
     	numberman = new Image("images/numsprite.png");
-    	custbar = new Image("images/custombar.png");  
+    	//custbar = new Image("images/custombar.png");  
     	waitingScrn = new Image("images/waitingscrn.png");
     	endingScrn = new Image("images/gameover.png");
     	
@@ -215,6 +213,7 @@ public class GameplayState extends BasicGameState {
     	sprites_chips = new SpriteSheet("images/sprites_chips.png", 34, 34);
     	sprites_chipscreen = new SpriteSheet("images/sprites_chipscreen.png", 164, 224);
     	sprites_chipCursor = new SpriteSheet("images/sprites_chipSelectCursor.png", 48, 48);
+    	sprites_digits = new SpriteSheet("images/sprites_digits.png", 23, 38);
     	
     	//animations
     	animChipCursor = new Animation();
@@ -238,27 +237,44 @@ public class GameplayState extends BasicGameState {
     	//basic things
     	background.draw();
     	field.draw();
-    	custbar.draw();
+    	//custbar.draw();
     	
     	//navis
-    	megaman.draw(navi[0].posX, navi[0].posY);
-    	numberman.draw(navi[1].posX, navi[1].posY);
+    	megaman.draw(navi[0].getPosX(), navi[0].getPosY());
+    	numberman.draw(navi[1].getPosX(), navi[1].getPosY());
     	
-    	//hp levels
-    	g.drawString("" + navi[0].hp, navi[0].posX, navi[0].posY + 50);
-    	g.drawString("" + navi[1].hp, navi[1].posX, navi[1].posY + 50);
+    	//Print HP LEVELS
+    	int hp1 = navi[0].getHP();
+    	int hp2 = navi[1].getHP();
+    	int looper = 179;
+    	
+    	while (hp1 > 0) {
+    		(sprites_digits.getSprite(hp1%10, 0)).draw(looper, 37);
+    		looper -= 23;
+    		hp1 /= 10;
+    	}
+    	
+    	looper = 684;
+    	while (hp2 > 0) {
+    		(sprites_digits.getSprite(hp2%10, 0)).draw(looper, 37);
+    		looper -= 23;
+    		hp2 /= 10;
+    	}
+    	
+    	g.drawString(navi[0].getX() + " " + navi[0].getY() + " " + navi[0].getHP(), navi[0].getPosX(), navi[0].getPosY() + 50);
+    	g.drawString(navi[1].getX() + " " + navi[1].getY() + " " + navi[1].getHP(), navi[1].getPosX(), navi[1].getPosY() + 50);
     	
     	//draw and display chips in register
     	for (int i = 2, space = 0; i >= 0; i--, space += 10) {
     		if (chipSelected[i] != null) {
     			if (chipSelected[i].isEmpty && !chipSelected[i].isUsed) {
     				getFromSpriteSheet = sprites_chips.getSprite(0, chipSelected[i].getChipType());
-    	  			getFromSpriteSheet.draw(navi[playID].posX + space, navi[playID].posY - 40);
+    	  			getFromSpriteSheet.draw(navi[playID].getPosX() + space, navi[playID].getPosY() - 40);
     			}
     		}
     	}
     	
-    	//attacks
+    	//animation attacks
     	
     	//during chip selection state
     	if (chipSelectView) { 		
@@ -432,7 +448,7 @@ public class GameplayState extends BasicGameState {
 	   	} else if (input.isKeyPressed(Input.KEY_G)) {
 	   		//fire bullet
 	   		if (navi[playID].y == navi[1-playID].y) {
-	   			conn.sendMessage("FIRE " + playID + " " + 1); 
+	   			rcv.conn.sendMessage("FIRE " + playID + " " + 1); 
 	   		}
 	   	} else if (input.isKeyPressed(Input.KEY_SPACE)){
 	   		//launch chip (examine chip type, then send corresponding action)
@@ -471,7 +487,7 @@ public class GameplayState extends BasicGameState {
 	   					
 	   					chipSelected[i].isUsed = true;
 	   					if (msg != "")
-	   						conn.sendMessage(msg);
+	   						rcv.conn.sendMessage(msg);
 	   					break;
 	   				}
 	   			}
@@ -481,7 +497,7 @@ public class GameplayState extends BasicGameState {
 	   	
 	   	//send message for movements
 	   	if (direction != "")
-	   		conn.sendMessage("MOVE " + playID + " " + direction);
+	   		rcv.conn.sendMessage("MOVE " + playID + " " + direction);
 	   	
 	   	
     }
@@ -528,7 +544,7 @@ public class GameplayState extends BasicGameState {
     		if (chipScrnPtr == 5) {    								//exit selection screen
     			chipSelectView = false;
     			waitScreen = true;
-    			conn.sendMessage("READYCHIP " + rcv.id);
+    			rcv.conn.sendMessage("READYCHIP " + rcv.id);
     			
     		} else if (!chipAvailable[chipScrnPtr].isEmpty) {		//choose chip
 	    		for (int i = 0; i < 3; i++) {
@@ -581,6 +597,10 @@ public class GameplayState extends BasicGameState {
 ***************************************************************
             ERRORS LOG (To Fix) / TO DO LIST
 ***************************************************************
+
+WIDE SWORD
+--> Ay sword palang
+
 TIMER TASK
 --> palitan natin yung loop function into a thread function
 --> at saka dapat magpause din whenever chip selection screen

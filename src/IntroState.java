@@ -3,6 +3,7 @@ import org.newdawn.slick.Graphics;
 import org.newdawn.slick.Image;
 import org.newdawn.slick.Input;
 import org.newdawn.slick.SlickException;
+import org.newdawn.slick.gui.TextField;
 import org.newdawn.slick.state.BasicGameState;
 import org.newdawn.slick.state.StateBasedGame;
 
@@ -10,6 +11,7 @@ public class IntroState extends BasicGameState {
 
 	int stateID = -1;
 	Image background = null;
+	TextField porttxt, iptxt;
 	
 	boolean ready = false;
 	
@@ -25,6 +27,8 @@ public class IntroState extends BasicGameState {
 		
 		//basic images
 		background = new Image("images/back.png");
+		iptxt = new TextField(gc, gc.getDefaultFont(), 325, 350, 200, 30);
+		porttxt = new TextField(gc, gc.getDefaultFont(), 325, 350, 400, 30);
 	}
 
 	@Override
@@ -32,6 +36,8 @@ public class IntroState extends BasicGameState {
 		
 		background.draw();
 		g.drawString("Press Enter to begin game!", 350, 300);
+		iptxt.render(gc, g);
+		porttxt.render(gc, g);
 	}
 
 	@Override
@@ -40,6 +46,9 @@ public class IntroState extends BasicGameState {
 		Input input = gc.getInput();
 		
 		if (input.isKeyPressed(Input.KEY_ENTER)) {
+			BattleNetworkGame game = (BattleNetworkGame) sb;
+			game.ip = iptxt.getText();
+			game.port = porttxt.getText();
 			sb.enterState(BattleNetworkGame.GAMEPLAYSTATE);
 		}
 	}
