@@ -460,7 +460,7 @@ public class GameplayState extends BasicGameState {
 	   		}
 	   	} else if (input.isKeyPressed(Input.KEY_G)) {
 	   		//fire bullet
-	   		if (navi[playID].y == navi[1-playID].y) {
+	   		if (navi[playID].getY() == navi[1-playID].getY()) {
 	   			rcv.conn.sendMessage("FIRE " + playID + " " + 1); 
 	   		}
 	   	} else if (input.isKeyPressed(Input.KEY_SPACE)){
@@ -474,7 +474,7 @@ public class GameplayState extends BasicGameState {
 	   					//do switch here
 	   					switch (chipSelected[i].getChipType()) {	
 	   						case 0:	//Bomb
-	   							if (navi[playID].x == navi[1-playID].x) {
+	   							if (navi[playID].getX() == navi[1-playID].getX()) {
 	   								msg = "CHIP " + (1-playID) + " 1 " + (chipSelected[i].getHpDamage()) * -1;
 	   							}
 	   							break;
@@ -485,7 +485,7 @@ public class GameplayState extends BasicGameState {
 	   							msg = "CHIP " + (1-playID) + " 0 " + 0;
 	   							break;
 	   						case 3: //WideSwrd
-	   							if (Math.abs(navi[playID].x - navi[1-playID].x) == 2) {
+	   							if (Math.abs(navi[playID].getX() - navi[1-playID].getX()) == 2) {
 	   								msg = "CHIP " + (1-playID) + " 1 " + (chipSelected[i].getHpDamage()) * -1;
 	   							}
 	   							break;
@@ -493,7 +493,7 @@ public class GameplayState extends BasicGameState {
 	   							msg = "CHIP " + playID + " 0 " + chipSelected[i].getHpDamage();
 	   							break;
 	   						case 5: //Cannon
-	   							if (navi[playID].y == navi[1-playID].y)
+	   							if (navi[playID].getY() == navi[1-playID].getY())
 	   								msg = "CHIP " + (1-playID) + " 1 " + (chipSelected[i].getHpDamage()) * -1;
 	   							break;
 	   					}

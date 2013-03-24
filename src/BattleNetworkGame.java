@@ -19,8 +19,8 @@ public class BattleNetworkGame extends StateBasedGame {
 		// TODO Auto-generated method stub
 		AppGameContainer app = new AppGameContainer(new BattleNetworkGame());
 		app.setDisplayMode(800, 600, false);
-		//app.setMinimumLogicUpdateInterval(100);
-		//app.setMaximumLogicUpdateInterval(100);
+		app.setMaximumLogicUpdateInterval(31);
+		app.setMinimumLogicUpdateInterval(16);
 		app.start();
 	}
 	

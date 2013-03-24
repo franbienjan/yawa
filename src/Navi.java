@@ -6,7 +6,7 @@ public class Navi {
 	int x, y;									//grid coordinate of Navi
 	int adjust = 0;								//for player 2 Navi adjustment
 	int hp;										//hp of navi		
-	boolean win, lose;								//if navi won
+	boolean win, lose;							//if navi won
 	
 	//with regards to chips
 	int chipsleft;								//number of chips left
