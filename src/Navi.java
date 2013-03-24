@@ -5,7 +5,8 @@ public class Navi {
 	int tag;									//0 or 1 (player type)
 	int x, y;									//grid coordinate of Navi
 	int adjust = 0;								//for player 2 Navi adjustment
-	int hp;										//hp of navi
+	int hp;										//hp of navi		
+	boolean win, lose;								//if navi won
 	
 	//with regards to chips
 	int chipsleft;								//number of chips left
@@ -24,6 +25,9 @@ public class Navi {
 		
 		if (tag == 1)							//Player 2 adjustment
 			adjust = 400;
+		
+		this.win = false;
+		this.lose = false;
 			
 	}
 	
@@ -53,10 +57,18 @@ public class Navi {
 	
 	public void setX(float x) {
 		this.x = (int) x;
+		if (this.x < 0)
+			this.x = 0;
+		else if (this.x > 2)
+			this.x = 2;
 	}
 	
 	public void setY(float y) {
 		this.y = (int) y;
+		if (this.y < 0)
+			this.y = 0;
+		else if (this.y > 2)
+			this.y = 2;
 	}
 	
 	/*

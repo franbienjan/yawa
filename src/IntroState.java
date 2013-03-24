@@ -27,8 +27,10 @@ public class IntroState extends BasicGameState {
 		
 		//basic images
 		background = new Image("images/back.png");
-		iptxt = new TextField(gc, gc.getDefaultFont(), 325, 350, 200, 30);
-		porttxt = new TextField(gc, gc.getDefaultFont(), 325, 350, 400, 30);
+		iptxt = new TextField(gc, gc.getDefaultFont(), 300, 350, 200, 30);
+		porttxt = new TextField(gc, gc.getDefaultFont(), 500, 350, 200, 30);
+		iptxt.setFocus(true);
+		
 	}
 
 	@Override
@@ -50,6 +52,13 @@ public class IntroState extends BasicGameState {
 			game.ip = iptxt.getText();
 			game.port = porttxt.getText();
 			sb.enterState(BattleNetworkGame.GAMEPLAYSTATE);
+		} else if (input.isKeyPressed(Input.KEY_TAB)) {
+			if (iptxt.hasFocus()) {
+				porttxt.setFocus(true);
+			} else {
+				iptxt.setFocus(true);
+			}
+			
 		}
 	}
 

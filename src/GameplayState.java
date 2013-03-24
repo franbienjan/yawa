@@ -22,6 +22,7 @@ public class GameplayState extends BasicGameState {
 		boolean ready, start, wait;				//waiting for game to begin 
 		Navi[] navi;
 		boolean isChipScrn;						//if its time to display the chip screen
+		boolean isWin;							//if winner
 		
 		public rcvthread (Socket socket, Navi[] navi) {
 			this.conn = new MyConnection(socket);
@@ -30,6 +31,7 @@ public class GameplayState extends BasicGameState {
 			this.start = false;
 			this.wait = false;
 			this.isChipScrn = false;
+			this.isWin = false;
 		}
 		
 		public void run() {
@@ -55,7 +57,7 @@ public class GameplayState extends BasicGameState {
 				// (3) CHIPSCREEN <mode>
 				// (4) FIRE <player_ID_caster> <damage>
 				// (5) CHIP <player_ID_caster> <chip_type> <negative/positive>
-				// (6) 
+				// (6) WIN <player_ID>
 				
 				if (msg.startsWith("START")) {
 					this.start = true;
@@ -95,7 +97,6 @@ public class GameplayState extends BasicGameState {
 					}
 					
 				} else if (msg.startsWith("CHIP ")) {
-					System.out.println("CHIP message: " + msg);
 					int temp = msg.charAt(5) - 48;
 					int damtype = msg.charAt(7) - 48;
 					int damage = Integer.parseInt(msg.substring(9));
@@ -107,6 +108,10 @@ public class GameplayState extends BasicGameState {
 					}
 					
 					navi[temp].setHP(navi[temp].getHP() + (damage * damtype));
+				} else if (msg.startsWith("WIN ")) {
+					int temp = msg.charAt(4) - 48;
+					navi[temp].win = true;
+					navi[1-temp].lose = true;
 				}
 			}
 		}
@@ -152,10 +157,8 @@ public class GameplayState extends BasicGameState {
     private Image field = null;							//arena (red and blue)
     private Image megaman = null;						//player1 navi
     private Image numberman = null;						//player2 navi
-    private Image custbar = null;						//custom gauge bar on top
+    //private Image custbar = null;						//custom gauge bar on top
     private Image chipSelectScrn = null;				//chipSelector
-    	private Image chipSelectScrn_ok = null;			//subImage of OK screen
-    	private Image chipSelectScrn_add = null;		//subImage of ADD screen
     private Image waitingScrn = null;					//waiting screen after chips
     private Image endingScrn = null;					//ending screen game over
     
@@ -226,9 +229,9 @@ public class GameplayState extends BasicGameState {
     	
     	//chip select screen sub-images
     	chipSelectScrn = new Image("images/chipSelectScrn.png");
-    		chipSelectScrn_ok = chipSelectScrn.getSubImage(227,294,52,44);
+    	/*	chipSelectScrn_ok = chipSelectScrn.getSubImage(227,294,52,44);
     		chipSelectScrn_add = chipSelectScrn.getSubImage(0,0,0,0);
-    		
+    	*/	
     	navi[0] = new Navi(0);
     	navi[1] = new Navi(1);
     }
@@ -320,12 +323,18 @@ public class GameplayState extends BasicGameState {
     	
     	//waiting stage
     	if (waitScreen || !rcv.start) {
+    		
     		waitingScrn.draw();
     	}
     	
     	//ending screen
     	if (endScreen) {
     		endingScrn.draw();
+    		if (navi[playID].win) {
+    			g.drawString("YOU WINNNNN!", 100, 100);
+    		} else {
+    			g.drawString("YOU LOSEEEE!", 100, 100);
+    		}
     	}
     }
   
@@ -342,6 +351,10 @@ public class GameplayState extends BasicGameState {
 	    	
 	    	if (navi[0].hp <= 0 || navi[1].hp <= 0) {
 	    		currentState = STATES.END_GAME_STATE;
+	    		if (navi[0].hp <= 0)
+	    			rcv.conn.sendMessage("WIN 1");
+	    		else if (navi[1].hp <= 0)
+	    			rcv.conn.sendMessage("WIN 0");
 	    	}
 	    	
 	    	switch (currentState) {
