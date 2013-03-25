@@ -8,6 +8,7 @@ import org.newdawn.slick.Graphics;
 import org.newdawn.slick.Image;
 import org.newdawn.slick.Input;
 import org.newdawn.slick.SlickException;
+import org.newdawn.slick.Sound;
 import org.newdawn.slick.SpriteSheet;
 import org.newdawn.slick.state.BasicGameState;
 import org.newdawn.slick.state.StateBasedGame;
@@ -56,29 +57,32 @@ public class GameplayState extends BasicGameState {
 				// (2) MOVE <player_ID> <direction>
 				// (3) CHIPSCREEN <mode>
 				// (4) FIRE <player_ID_caster> <damage>
-				// (5) CHIP <player_ID_caster> <chip_type> <negative/positive>
+				// (5) CHIP <player_ID_caster> <chip_type> <negative/positive> <damage>
 				// (6) WIN <player_ID>
 				
 				if (msg.startsWith("START")) {
 					this.start = true;
 				} else if (msg.startsWith("MOVE ")) {
 					int temp = msg.charAt(5) - 48;
-					String dir = msg.substring(7);
+					int dir = msg.charAt(7) - 48;
 
 					switch(dir) {
-						case "LEFT":
+						case 0:
 							navi[temp].setX(navi[temp].getX() - 1);
 							break;
-						case "RIGHT":
+						case 1:
 							navi[temp].setX(navi[temp].getX() + 1);
 							break;
-						case "UP":
+						case 2:
 							navi[temp].setY(navi[temp].getY() - 1);
 							break;
-						case "DOWN":
+						case 3:
 							navi[temp].setY(navi[temp].getY() + 1);
 							break;
 					}
+					
+					navi[temp].resetAll();
+					
 				} else if (msg.startsWith("CHIPSCREEN")) {
 					int mode = msg.charAt(11) - 48;
 					if (mode == 0) {
@@ -91,18 +95,40 @@ public class GameplayState extends BasicGameState {
 				} else if (msg.startsWith("FIRE ")) {
 					int temp = msg.charAt(5) - 48;
 					int damage = msg.charAt(7) - 48;
+					navi[1-temp].is_damaged = true;
 					
 					if (damage == 1) {
 						navi[1-temp].setHP(navi[1-temp].hp - 1);
 					}
 					
 				} else if (msg.startsWith("CHIP ")) {
-					int temp = msg.charAt(5) - 48;
-					int damtype = msg.charAt(7) - 48;
-					int damage = Integer.parseInt(msg.substring(9));
+					int chiptype = msg.charAt(5) - 48;
+					int temp = msg.charAt(7) - 48;
+					int damtype = msg.charAt(9) - 48;
+					int damage = Integer.parseInt(msg.substring(11));
 					
+					switch (chiptype) {
+						case 0:	//bomb
+							break;
+						case 1: //recov80
+							navi[temp].is_energized = true;
+							break;
+						case 2: //sword
+							navi[1-temp].is_sabunot = true;
+							break;
+						case 3: //wide sword
+							navi[1-temp].is_sampal = true;
+							break;
+						case 4: //recov30
+							navi[temp].is_energized = true;
+							break;
+						case 5:	//cannon
+							navi[1-temp].is_tapon = true;
+							break;
+					}
 					if (damtype == 1) {
 						damage *= -1;
+						navi[temp].is_damaged = true;
 					} else if (damtype == 0) {
 						damtype = 1;
 					}
@@ -123,8 +149,8 @@ public class GameplayState extends BasicGameState {
 	//*****************************************************************************************
 	
 	//threads for client
-	private rcvthread rcv;
-	private MyConnection conn;
+	rcvthread rcv;
+	Socket socket;
 	int stateID = -1;
 	
     //game states
@@ -154,20 +180,22 @@ public class GameplayState extends BasicGameState {
     
     //images used
     private Image background = null;					//background image of area
-    private Image field = null;							//arena (red and blue)
-    private Image megaman = null;						//player1 navi
-    private Image numberman = null;						//player2 navi
-    //private Image custbar = null;						//custom gauge bar on top
     private Image chipSelectScrn = null;				//chipSelector
     private Image waitingScrn = null;					//waiting screen after chips
-    private Image endingScrn = null;					//ending screen game over
+    private Image winScrn = null;						//ending screen game over
+    private Image loseScrn = null;						//ending screen game over
     
     //spritesheets
     private SpriteSheet sprites_chips = null;			//sprites of small chips
     private SpriteSheet sprites_chipscreen = null;		//sprites of big chips
     private SpriteSheet sprites_chipCursor = null;		//sprites for blinking cursor
     private SpriteSheet sprites_digits = null;			//sprites for blinking cursor
+    private SpriteSheet finalscreen = null;
     private Image getFromSpriteSheet = null;			//temporary holder of images from sprites
+    
+    private Sound fx = null;
+    private Sound ouch = null;
+    private Sound slap = null;
     
     //animations
     private Animation animChipCursor = null;			//animation for blinking cursor   
@@ -186,37 +214,38 @@ public class GameplayState extends BasicGameState {
     public void enter(GameContainer gc, StateBasedGame sb) throws SlickException {
     	super.enter(gc, sb);
 
-    	Socket socket;
 		try {
 			BattleNetworkGame bng = (BattleNetworkGame) sb;
 			socket = new Socket(bng.ip, Integer.parseInt(bng.port));
-			rcv = new rcvthread(socket, navi);
-			conn = new MyConnection(socket);				//for this thread
-			rcv.start();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		
-		currentState = STATES.START_GAME_STATE;		
+		rcv = new rcvthread(socket, navi);
+		rcv.start();
+		
+		currentState = STATES.START_GAME_STATE;
 		
     }
   
     public void init(GameContainer gc, StateBasedGame sb) throws SlickException {
     	
+    	fx = new Sound("images/mars.wav");
+    	ouch = new Sound("images/ouch.wav");
+    	slap = new Sound("images/slap.wav");
+    	
     	//basic images
     	background = new Image("images/back.png");
-    	field = new Image("images/field.png");
-    	megaman = new Image("images/megasprite.png");
-    	numberman = new Image("images/numsprite.png");
-    	//custbar = new Image("images/custombar.png");  
     	waitingScrn = new Image("images/waitingscrn.png");
-    	endingScrn = new Image("images/gameover.png");
+    	winScrn = new Image("images/winscreen.png");
+    	loseScrn = new Image("images/losescreen.png");
     	
     	//sprite sheets
     	sprites_chips = new SpriteSheet("images/sprites_chips.png", 34, 34);
     	sprites_chipscreen = new SpriteSheet("images/sprites_chipscreen.png", 164, 224);
     	sprites_chipCursor = new SpriteSheet("images/sprites_chipSelectCursor.png", 48, 48);
     	sprites_digits = new SpriteSheet("images/sprites_digits.png", 23, 38);
+    	finalscreen = new SpriteSheet("images/finalscreen.png", 400, 300);
     	
     	//animations
     	animChipCursor = new Animation();
@@ -234,17 +263,19 @@ public class GameplayState extends BasicGameState {
     	*/	
     	navi[0] = new Navi(0);
     	navi[1] = new Navi(1);
+    	
+    	fx.play();
+    	fx.loop();
     }
   
     public void render(GameContainer gc, StateBasedGame sb, Graphics g) throws SlickException {
     	//basic things
     	background.draw();
-    	field.draw();
-    	//custbar.draw();
+    	//field.draw();
     	
     	//navis
-    	megaman.draw(navi[0].getPosX(), navi[0].getPosY());
-    	numberman.draw(navi[1].getPosX(), navi[1].getPosY());
+    	g.drawAnimation(navi[0].getAnimation(), navi[0].getPosX(), navi[0].getPosY());
+    	g.drawAnimation(navi[1].getAnimation(), navi[1].getPosX(), navi[1].getPosY());
     	
     	//Print HP LEVELS
     	int hp1 = navi[0].getHP();
@@ -264,8 +295,8 @@ public class GameplayState extends BasicGameState {
     		hp2 /= 10;
     	}
     	
-    	g.drawString(navi[0].getX() + " " + navi[0].getY() + " " + navi[0].getHP(), navi[0].getPosX(), navi[0].getPosY() + 50);
-    	g.drawString(navi[1].getX() + " " + navi[1].getY() + " " + navi[1].getHP(), navi[1].getPosX(), navi[1].getPosY() + 50);
+    	//g.drawString(navi[0].getX() + " " + navi[0].getY() + " " + navi[0].getHP(), navi[0].getPosX(), navi[0].getPosY() + 50);
+    	//g.drawString(navi[1].getX() + " " + navi[1].getY() + " " + navi[1].getHP(), navi[1].getPosX(), navi[1].getPosY() + 50);
     	
     	//draw and display chips in register
     	for (int i = 2, space = 0; i >= 0; i--, space += 10) {
@@ -329,11 +360,12 @@ public class GameplayState extends BasicGameState {
     	
     	//ending screen
     	if (endScreen) {
-    		endingScrn.draw();
     		if (navi[playID].win) {
-    			g.drawString("YOU WINNNNN!", 100, 100);
+    			winScrn.draw();
+    			(finalscreen.getSprite(playID, 0)).draw(192,60);
     		} else {
-    			g.drawString("YOU LOSEEEE!", 100, 100);
+    			loseScrn.draw();
+    			(finalscreen.getSprite(playID, 1)).draw(192,60);
     		}
     	}
     }
@@ -402,14 +434,14 @@ public class GameplayState extends BasicGameState {
     	//Order of Chips:
     	//0 - Bomb x6
     	//1 - +80 HP x1
-    	//2 - Stone Cube x6
+    	//2 - Sampal x6
     	//3 - Wide Sword x6
     	//4 - +30 HP x5
     	//5 - Cannon x6
     	//**************************
     	
     	//damages array
-    	int[] hpdamage = {-50, 80, 0, -80, 30, -40};
+    	int[] hpdamage = {-50, 80, -80, -60, 30, -50};
     	
     	//Letters assigned to the chips is either A, B, or C lang muna. (or 0, 1, and 2)
     	Random rand = new Random();
@@ -436,33 +468,37 @@ public class GameplayState extends BasicGameState {
     	//wait for input from player
     	//wait for input from opposite player
     	//update other stuff like bullets and bombs and shit
+    	//DIRECTION / MOVEMENTS
+    	//0 - Left
+    	//1 - Right
+    	//2 - Up
+    	//3 - Down
     	
     	//INPUT FROM PLAYER ----------------------------
     	Input input = gc.getInput();
-    	String direction = "";
    	 	playID = rcv.id;
    	 	
 	   	if (input.isKeyPressed(Input.KEY_A)) {
 	   		if (navi[playID].getX() > 0) {
-	   			direction = "LEFT";
+	   			rcv.conn.sendMessage("MOVE " + playID + " " + 0);
 	   		}
 	   	} else if (input.isKeyPressed(Input.KEY_D)) {
 	   		if (navi[playID].getX() < 2) {
-	   			direction = "RIGHT";
+	   			rcv.conn.sendMessage("MOVE " + playID + " " + 1);
 	   		}
 	   	} else if (input.isKeyPressed(Input.KEY_W)) {
 	   		if (navi[playID].getY() > 0) {
-	   			direction = "UP";
+	   			rcv.conn.sendMessage("MOVE " + playID + " " + 2);
 	   		}
 	   	} else if (input.isKeyPressed(Input.KEY_S)) {
 	   		if (navi[playID].getY() < 2) {
-	   			direction = "DOWN";
+	   			rcv.conn.sendMessage("MOVE " + playID + " " + 3);
 	   		}
 	   	} else if (input.isKeyPressed(Input.KEY_G)) {
 	   		//fire bullet
-	   		if (navi[playID].getY() == navi[1-playID].getY()) {
+	   		navi[playID].is_bullet = true;
+	   		if (navi[playID].getY() == navi[1-playID].getY())
 	   			rcv.conn.sendMessage("FIRE " + playID + " " + 1); 
-	   		}
 	   	} else if (input.isKeyPressed(Input.KEY_SPACE)){
 	   		//launch chip (examine chip type, then send corresponding action)
 	   		for (int i = 0; i < 3; i++) {
@@ -470,31 +506,38 @@ public class GameplayState extends BasicGameState {
 	   				if (!chipSelected[i].isUsed) {
 
 	   					String msg = "";
-	   					
+	   					int chiptype = chipSelected[i].getChipType();
 	   					//do switch here
-	   					switch (chipSelected[i].getChipType()) {	
+	   					switch (chiptype) {	
 	   						case 0:	//Bomb
 	   							if (navi[playID].getX() == navi[1-playID].getX()) {
-	   								msg = "CHIP " + (1-playID) + " 1 " + (chipSelected[i].getHpDamage()) * -1;
+	   								msg = "CHIP " + chiptype + " " + (1-playID) + " 1 " + (chipSelected[i].getHpDamage()) * -1;
+	   								ouch.play();
 	   							}
 	   							break;
 	   						case 1: //Recov80
-	   							msg = "CHIP " + playID + " 0 " + chipSelected[i].getHpDamage();
+	   							msg = "CHIP " + chiptype + " " + playID + " 0 " + chipSelected[i].getHpDamage();
 	   							break;
-	   						case 2: //RockCube
-	   							msg = "CHIP " + (1-playID) + " 0 " + 0;
+	   						case 2: //Sabunot
+	   							if ((Math.abs(navi[playID].getX() - navi[1-playID].getX()) == 2) && (navi[playID].getY() == navi[1-playID].getY())) {
+	   								msg = "CHIP " + chiptype + " " + (1-playID) + " 1 " + (chipSelected[i].getHpDamage()) * -1;
+	   								ouch.play();
+	   							}
 	   							break;
-	   						case 3: //WideSwrd
+	   						case 3: //Sampal
 	   							if (Math.abs(navi[playID].getX() - navi[1-playID].getX()) == 2) {
-	   								msg = "CHIP " + (1-playID) + " 1 " + (chipSelected[i].getHpDamage()) * -1;
+	   								msg = "CHIP " + chiptype + " " + (1-playID) + " 1 " + (chipSelected[i].getHpDamage()) * -1;
+	   								slap.play();
 	   							}
 	   							break;
 	   						case 4: //Recov30
-	   							msg = "CHIP " + playID + " 0 " + chipSelected[i].getHpDamage();
+	   							msg = "CHIP " + chiptype + " " + playID + " 0 " + chipSelected[i].getHpDamage();
 	   							break;
 	   						case 5: //Cannon
-	   							if (navi[playID].getY() == navi[1-playID].getY())
-	   								msg = "CHIP " + (1-playID) + " 1 " + (chipSelected[i].getHpDamage()) * -1;
+	   							if (navi[playID].getY() == navi[1-playID].getY()) {
+	   								msg = "CHIP " + chiptype + " " + (1-playID) + " 1 " + (chipSelected[i].getHpDamage()) * -1;
+	   								ouch.play();
+	   							}
 	   							break;
 	   					}
 	   					
@@ -506,11 +549,9 @@ public class GameplayState extends BasicGameState {
 	   			}
 	   		}
 	   		
+	   	} else if (!input.isKeyPressed(Input.KEY_G)) {
+	   		navi[playID].is_bullet = false;
 	   	}
-	   	
-	   	//send message for movements
-	   	if (direction != "")
-	   		rcv.conn.sendMessage("MOVE " + playID + " " + direction);
 	   	
 	   	
     }

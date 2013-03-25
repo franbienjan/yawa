@@ -26,9 +26,9 @@ public class IntroState extends BasicGameState {
 	public void init(GameContainer gc, StateBasedGame sb) throws SlickException {
 		
 		//basic images
-		background = new Image("images/back.png");
-		iptxt = new TextField(gc, gc.getDefaultFont(), 300, 350, 200, 30);
-		porttxt = new TextField(gc, gc.getDefaultFont(), 500, 350, 200, 30);
+		background = new Image("images/title.png");
+		iptxt = new TextField(gc, gc.getDefaultFont(), 200, 500, 200, 30);
+		porttxt = new TextField(gc, gc.getDefaultFont(), 400, 500, 200, 30);
 		iptxt.setFocus(true);
 		
 	}
@@ -37,7 +37,6 @@ public class IntroState extends BasicGameState {
 	public void render(GameContainer gc, StateBasedGame sb, Graphics g) throws SlickException {
 		
 		background.draw();
-		g.drawString("Press Enter to begin game!", 350, 300);
 		iptxt.render(gc, g);
 		porttxt.render(gc, g);
 	}

@@ -1,5 +1,10 @@
 import java.util.Random;
 
+import org.newdawn.slick.Animation;
+import org.newdawn.slick.Image;
+import org.newdawn.slick.SlickException;
+import org.newdawn.slick.SpriteSheet;
+
 public class Navi {
 
 	int tag;									//0 or 1 (player type)
@@ -7,28 +12,62 @@ public class Navi {
 	int adjust = 0;								//for player 2 Navi adjustment
 	int hp;										//hp of navi		
 	boolean win, lose;							//if navi won
+	Animation idle, bullet, sabunot, tapon, sampal, damage, energized;
+	boolean is_bullet, is_damaged, is_idle, is_sabunot, is_sampal, is_tapon, is_energized;
 	
-	//with regards to chips
-	int chipsleft;								//number of chips left
-	int[] chipTally = {6, 1, 6, 6, 5, 6};		//there are 5 chips per 6 types QUANTITY (tally only)
-	Chip[] chipFolder = new Chip[30];			//list of presented chips ready
-	Chip[] chipAvailable = new Chip[5];			//5 chips that are in the choosing list
-	Chip[] chipSelected = new Chip[3];			//3 chips that are ready for battle phase
-	
-	public Navi (int tag) {
+	public Navi (int tag) throws SlickException {
 		//initialization
 		x = 1;
 		y = 1;
-		hp = 150;
-		chipsleft = 30;
+		hp = 200;
 		this.tag = tag;							//indicate player type
+		String imgtxt = "";
+		resetAll();
 		
-		if (tag == 1)							//Player 2 adjustment
+		if (tag == 0)
+			imgtxt = "Marian";
+		else if (tag == 1) {						//Player 2 adjustment
 			adjust = 400;
+			imgtxt = "Claudine";
+		}
 		
 		this.win = false;
 		this.lose = false;
-			
+		
+		idle = new Animation(new SpriteSheet ("images/" + imgtxt + "_idle.png", 79, 113), 200);
+		damage = new Animation(new SpriteSheet ("images/" + imgtxt + "_damage.png", 79, 113), 200);
+		bullet = new Animation(new SpriteSheet ("images/" + imgtxt + "_bullet.png", 79, 113), 200);
+		sampal = new Animation(new SpriteSheet ("images/" + imgtxt + "_sampal.png", 86, 113), 200);
+		tapon = new Animation(new SpriteSheet ("images/" + imgtxt + "_tapon.png", 111, 144), 200);
+		energized = new Animation(new SpriteSheet ("images/" + imgtxt + "_energized.png", 79, 113), 200);
+		sabunot = new Animation(new SpriteSheet ("images/" + imgtxt + "_sabunot.png", 79, 113), 200);
+	}
+	
+	public void resetAll() {
+		this.is_bullet = false;
+		this.is_damaged = false;
+		this.is_energized = false;
+		this.is_idle = false;
+		this.is_sampal = false;
+		this.is_tapon = false;
+		this.is_sabunot = false;
+	}
+	
+	public Animation getAnimation() {
+		if (is_bullet)
+			return bullet;
+		else if (is_energized)
+			return energized;
+		else if (is_tapon)
+			return tapon;
+		else if (is_sampal)
+			return sampal;
+		else if (is_sabunot)
+			return sabunot;
+		else if (is_damaged)
+			return damage;
+		else
+			return idle;
 	}
 	
 	public void setHP (int hp) {
@@ -44,7 +83,7 @@ public class Navi {
 	}
 	
 	public float getPosY() {
-		return 320 + (this.y * 80);
+		return 275 + (this.y * 80);
 	}
 	
 	public int getX() {
