@@ -230,7 +230,7 @@ public class GameplayState extends BasicGameState {
   
     public void init(GameContainer gc, StateBasedGame sb) throws SlickException {
     	
-    	fx = new Sound("images/mars.wav");
+    	fx = new Sound("images/mart.wav");
     	ouch = new Sound("images/ouch.wav");
     	slap = new Sound("images/slap.wav");
     	
